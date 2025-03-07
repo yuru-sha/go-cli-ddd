@@ -26,10 +26,10 @@ func GenerateModels(db *gorm.DB) error {
 	g.ApplyBasic(
 		// Account モデル
 		g.GenerateModel("accounts", gen.FieldType("created_at", "time.Time"), gen.FieldType("updated_at", "time.Time")),
-		
+
 		// Campaign モデル
-		g.GenerateModel("campaigns", 
-			gen.FieldType("created_at", "time.Time"), 
+		g.GenerateModel("campaigns",
+			gen.FieldType("created_at", "time.Time"),
 			gen.FieldType("updated_at", "time.Time"),
 			gen.FieldType("start_date", "time.Time"),
 			gen.FieldType("end_date", "time.Time"),

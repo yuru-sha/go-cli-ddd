@@ -22,7 +22,7 @@ func NewCampaignRepository(db *gorm.DB) repository.CampaignRepository {
 }
 
 // FindAll は全てのキャンペーンを取得します
-func (r *CampaignRepositoryImpl) FindAll(ctx context.Context) ([]entity.Campaign, error) {
+func (r *CampaignRepositoryImpl) FindAll(_ context.Context) ([]entity.Campaign, error) {
 	var campaigns []entity.Campaign
 	result := r.db.Find(&campaigns)
 	if result.Error != nil {
@@ -33,7 +33,7 @@ func (r *CampaignRepositoryImpl) FindAll(ctx context.Context) ([]entity.Campaign
 }
 
 // FindByID は指定されたIDのキャンペーンを取得します
-func (r *CampaignRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.Campaign, error) {
+func (r *CampaignRepositoryImpl) FindByID(_ context.Context, id uint) (*entity.Campaign, error) {
 	var campaign entity.Campaign
 	result := r.db.First(&campaign, id)
 	if result.Error != nil {
@@ -48,7 +48,7 @@ func (r *CampaignRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity
 }
 
 // FindByAccountID は指定されたアカウントIDに関連するキャンペーンを全て取得します
-func (r *CampaignRepositoryImpl) FindByAccountID(ctx context.Context, accountID uint) ([]entity.Campaign, error) {
+func (r *CampaignRepositoryImpl) FindByAccountID(_ context.Context, accountID uint) ([]entity.Campaign, error) {
 	var campaigns []entity.Campaign
 	result := r.db.Where("account_id = ?", accountID).Find(&campaigns)
 	if result.Error != nil {
@@ -59,7 +59,7 @@ func (r *CampaignRepositoryImpl) FindByAccountID(ctx context.Context, accountID 
 }
 
 // Create は新しいキャンペーンを作成します
-func (r *CampaignRepositoryImpl) Create(ctx context.Context, campaign *entity.Campaign) error {
+func (r *CampaignRepositoryImpl) Create(_ context.Context, campaign *entity.Campaign) error {
 	result := r.db.Create(campaign)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Msg("キャンペーンの作成に失敗しました")
@@ -69,7 +69,7 @@ func (r *CampaignRepositoryImpl) Create(ctx context.Context, campaign *entity.Ca
 }
 
 // Update は既存のキャンペーンを更新します
-func (r *CampaignRepositoryImpl) Update(ctx context.Context, campaign *entity.Campaign) error {
+func (r *CampaignRepositoryImpl) Update(_ context.Context, campaign *entity.Campaign) error {
 	result := r.db.Save(campaign)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Uint("id", campaign.ID).Msg("キャンペーンの更新に失敗しました")
@@ -79,7 +79,7 @@ func (r *CampaignRepositoryImpl) Update(ctx context.Context, campaign *entity.Ca
 }
 
 // Delete は指定されたIDのキャンペーンを削除します
-func (r *CampaignRepositoryImpl) Delete(ctx context.Context, id uint) error {
+func (r *CampaignRepositoryImpl) Delete(_ context.Context, id uint) error {
 	result := r.db.Delete(&entity.Campaign{}, id)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Uint("id", id).Msg("キャンペーンの削除に失敗しました")
@@ -89,7 +89,7 @@ func (r *CampaignRepositoryImpl) Delete(ctx context.Context, id uint) error {
 }
 
 // SaveAll は複数のキャンペーンを一括で保存します
-func (r *CampaignRepositoryImpl) SaveAll(ctx context.Context, campaigns []entity.Campaign) error {
+func (r *CampaignRepositoryImpl) SaveAll(_ context.Context, campaigns []entity.Campaign) error {
 	// トランザクションを開始
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// 既存のデータを取得

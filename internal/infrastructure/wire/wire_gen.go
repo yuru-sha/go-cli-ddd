@@ -21,8 +21,8 @@ import (
 // InitializeApp はアプリケーションを初期化します
 func InitializeApp(params AppParams) (*cobra.Command, error) {
 	rootCommand := cli.NewRootCommand()
-	configOptions := ProvideConfigOptions(params)
-	configConfig, err := config.LoadConfig(configOptions)
+	options := ProvideConfigOptions(params)
+	configConfig, err := config.LoadConfig(options)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ type AppParams struct {
 }
 
 // ProvideConfigOptions は設定オプションを提供します
-func ProvideConfigOptions(params AppParams) *config.ConfigOptions {
+func ProvideConfigOptions(params AppParams) *config.Options {
 	return config.NewConfigOptions(params.ConfigPath, params.Env)
 }
 

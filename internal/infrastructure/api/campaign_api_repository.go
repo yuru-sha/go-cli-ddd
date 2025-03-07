@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -70,52 +71,95 @@ func (r *CampaignAPIRepositoryImpl) FetchCampaignsByAccountID(ctx context.Contex
 }
 
 // fetchMockCampaigns はモックのキャンペーンデータを返します
-func (r *CampaignAPIRepositoryImpl) fetchMockCampaigns(ctx context.Context, accountID uint) ([]entity.Campaign, error) {
+func (r *CampaignAPIRepositoryImpl) fetchMockCampaigns(_ context.Context, accountID uint) ([]entity.Campaign, error) {
 	log.Info().Uint("account_id", accountID).Msg("モックキャンペーンデータを使用します")
-	
+
 	// 現在時刻
 	now := time.Now()
-	
-	// 乱数生成器の初期化
-	rnd := rand.New(rand.NewSource(int64(accountID)))
-	
+
+	// 安全な乱数生成のためにcrypto/randを使用
 	// キャンペーン数を決定（1〜5個）
-	campaignCount := rnd.Intn(5) + 1
-	
+	campaignCountBig, err := rand.Int(rand.Reader, big.NewInt(5))
+	if err != nil {
+		return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+	}
+	campaignCount := int(campaignCountBig.Int64()) + 1
+
 	// モックデータ
 	mockCampaigns := make([]entity.Campaign, 0, campaignCount)
-	
+
 	// キャンペーンステータスのリスト
 	statuses := []string{"active", "paused", "completed", "draft"}
-	
+
 	for i := 1; i <= campaignCount; i++ {
+		// 安全な乱数生成
+		dayOffsetBig, err := rand.Int(rand.Reader, big.NewInt(30))
+		if err != nil {
+			return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+		}
+		dayOffset := int(dayOffsetBig.Int64())
+
+		durationBig, err := rand.Int(rand.Reader, big.NewInt(60))
+		if err != nil {
+			return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+		}
+		duration := int(durationBig.Int64()) + 30
+
+		budgetBig, err := rand.Int(rand.Reader, big.NewInt(99))
+		if err != nil {
+			return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+		}
+		budget := 10000.0 + float64(budgetBig.Int64())*10000.0
+
+		statusIndexBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(statuses))))
+		if err != nil {
+			return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+		}
+		status := statuses[statusIndexBig.Int64()]
+
+		createdOffsetBig, err := rand.Int(rand.Reader, big.NewInt(30))
+		if err != nil {
+			return nil, fmt.Errorf("乱数生成に失敗しました: %w", err)
+		}
+		createdOffset := int(createdOffsetBig.Int64())
+
 		// 開始日と終了日を生成
-		startDate := now.AddDate(0, 0, -rnd.Intn(30))
-		endDate := startDate.AddDate(0, 0, 30+rnd.Intn(60))
-		
-		// 予算を生成（10000〜1000000円）
-		budget := 10000.0 + float64(rnd.Intn(99))*10000.0
-		
-		// ステータスをランダムに選択
-		status := statuses[rnd.Intn(len(statuses))]
-		
+		startDate := now.AddDate(0, 0, -dayOffset)
+		endDate := startDate.AddDate(0, 0, duration)
+
+		// 安全な整数変換（オーバーフロー防止）
+		var campaignID uint
+		if accountID <= (^uint(0))/100 { // オーバーフロー防止のチェック
+			campaignID = accountID * 100
+		} else {
+			campaignID = ^uint(0) - uint(i) // 最大値に近い値を使用
+		}
+
+		// iが小さい値であることを確認
+		if i < 100 && i > 0 { // 適当な上限と下限
+			// 整数オーバーフローを防止するための追加チェック
+			if campaignID <= (^uint(0))-uint(i) {
+				campaignID += uint(i)
+			}
+		}
+
 		campaign := entity.Campaign{
-			ID:        uint(accountID*100 + uint(i)),
+			ID:        campaignID,
 			AccountID: accountID,
 			Name:      fmt.Sprintf("キャンペーン%d-%d", accountID, i),
 			Status:    status,
 			Budget:    budget,
 			StartDate: startDate,
 			EndDate:   endDate,
-			CreatedAt: now.Add(-time.Duration(rnd.Intn(30)) * 24 * time.Hour),
+			CreatedAt: now.Add(-time.Duration(createdOffset) * 24 * time.Hour),
 			UpdatedAt: now,
 		}
-		
+
 		mockCampaigns = append(mockCampaigns, campaign)
 	}
-	
+
 	// 少し遅延を入れてAPIリクエストをシミュレート
 	time.Sleep(300 * time.Millisecond)
-	
+
 	return mockCampaigns, nil
 }

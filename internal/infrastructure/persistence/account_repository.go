@@ -22,7 +22,7 @@ func NewAccountRepository(db *gorm.DB) repository.AccountRepository {
 }
 
 // FindAll は全てのアカウントを取得します
-func (r *AccountRepositoryImpl) FindAll(ctx context.Context) ([]entity.Account, error) {
+func (r *AccountRepositoryImpl) FindAll(_ context.Context) ([]entity.Account, error) {
 	var accounts []entity.Account
 	result := r.db.Find(&accounts)
 	if result.Error != nil {
@@ -33,7 +33,7 @@ func (r *AccountRepositoryImpl) FindAll(ctx context.Context) ([]entity.Account, 
 }
 
 // FindByID は指定されたIDのアカウントを取得します
-func (r *AccountRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.Account, error) {
+func (r *AccountRepositoryImpl) FindByID(_ context.Context, id uint) (*entity.Account, error) {
 	var account entity.Account
 	result := r.db.First(&account, id)
 	if result.Error != nil {
@@ -48,7 +48,7 @@ func (r *AccountRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.
 }
 
 // Create は新しいアカウントを作成します
-func (r *AccountRepositoryImpl) Create(ctx context.Context, account *entity.Account) error {
+func (r *AccountRepositoryImpl) Create(_ context.Context, account *entity.Account) error {
 	result := r.db.Create(account)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Msg("アカウントの作成に失敗しました")
@@ -58,7 +58,7 @@ func (r *AccountRepositoryImpl) Create(ctx context.Context, account *entity.Acco
 }
 
 // Update は既存のアカウントを更新します
-func (r *AccountRepositoryImpl) Update(ctx context.Context, account *entity.Account) error {
+func (r *AccountRepositoryImpl) Update(_ context.Context, account *entity.Account) error {
 	result := r.db.Save(account)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Uint("id", account.ID).Msg("アカウントの更新に失敗しました")
@@ -68,7 +68,7 @@ func (r *AccountRepositoryImpl) Update(ctx context.Context, account *entity.Acco
 }
 
 // Delete は指定されたIDのアカウントを削除します
-func (r *AccountRepositoryImpl) Delete(ctx context.Context, id uint) error {
+func (r *AccountRepositoryImpl) Delete(_ context.Context, id uint) error {
 	result := r.db.Delete(&entity.Account{}, id)
 	if result.Error != nil {
 		log.Error().Err(result.Error).Uint("id", id).Msg("アカウントの削除に失敗しました")
@@ -78,7 +78,7 @@ func (r *AccountRepositoryImpl) Delete(ctx context.Context, id uint) error {
 }
 
 // SaveAll は複数のアカウントを一括で保存します
-func (r *AccountRepositoryImpl) SaveAll(ctx context.Context, accounts []entity.Account) error {
+func (r *AccountRepositoryImpl) SaveAll(_ context.Context, accounts []entity.Account) error {
 	// トランザクションを開始
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// 既存のデータを取得

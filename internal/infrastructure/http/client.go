@@ -34,5 +34,25 @@ func NewBackOff(maxRetries int) backoff.BackOff {
 	exponentialBackOff.MaxInterval = 10 * time.Second
 	exponentialBackOff.MaxElapsedTime = 30 * time.Second
 
-	return backoff.WithMaxRetries(exponentialBackOff, uint64(maxRetries))
+	// 整数オーバーフローを防ぐため、maxRetriesが負の値や大きすぎる値の場合は制限する
+	if maxRetries < 0 {
+		maxRetries = 0
+	}
+
+	// uint64の最大値を超えないようにする
+	// 安全な値として100を上限とする
+	const maxSafeRetries = 100
+	if maxRetries > maxSafeRetries {
+		maxRetries = maxSafeRetries
+	}
+
+	// 安全に変換
+	var maxRetriesUint64 uint64
+	if maxRetries >= 0 {
+		maxRetriesUint64 = uint64(maxRetries)
+	} else {
+		maxRetriesUint64 = 0
+	}
+
+	return backoff.WithMaxRetries(exponentialBackOff, maxRetriesUint64)
 }

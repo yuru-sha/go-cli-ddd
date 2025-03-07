@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/repository"
 )

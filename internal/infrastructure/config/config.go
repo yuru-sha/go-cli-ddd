@@ -24,17 +24,17 @@ type AppConfig struct {
 
 // DatabaseConfig はデータベース接続の設定です
 type DatabaseConfig struct {
-	Dialect    string `mapstructure:"dialect"`
-	DSN        string `mapstructure:"dsn"`
-	LogLevel   string `mapstructure:"log_level"`
+	Dialect     string `mapstructure:"dialect"`
+	DSN         string `mapstructure:"dsn"`
+	LogLevel    string `mapstructure:"log_level"`
 	AutoMigrate bool   `mapstructure:"auto_migrate"`
 }
 
 // HTTPConfig はHTTPクライアントの設定です
 type HTTPConfig struct {
-	Timeout   int             `mapstructure:"timeout"`
-	MaxRetries int            `mapstructure:"max_retries"`
-	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Timeout    int             `mapstructure:"timeout"`
+	MaxRetries int             `mapstructure:"max_retries"`
+	RateLimit  RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 // RateLimitConfig はレート制限の設定です
@@ -55,22 +55,22 @@ type APIEndpointConfig struct {
 	Endpoint string `mapstructure:"endpoint"`
 }
 
-// ConfigOptions は設定読み込みのオプションを表します
-type ConfigOptions struct {
+// Options は設定読み込みのオプションを表します
+type Options struct {
 	ConfigPath string
 	Env        string
 }
 
 // NewConfigOptions は設定読み込みのオプションを作成します
-func NewConfigOptions(configPath, env string) *ConfigOptions {
-	return &ConfigOptions{
+func NewConfigOptions(configPath, env string) *Options {
+	return &Options{
 		ConfigPath: configPath,
 		Env:        env,
 	}
 }
 
 // LoadConfig は設定ファイルから設定を読み込みます
-func LoadConfig(opts *ConfigOptions) (*Config, error) {
+func LoadConfig(opts *Options) (*Config, error) {
 	viper.SetConfigFile(opts.ConfigPath)
 	viper.SetConfigType("yaml")
 

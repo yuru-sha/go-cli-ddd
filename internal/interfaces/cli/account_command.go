@@ -23,7 +23,7 @@ func NewAccountCommand(accountUseCase *usecase.AccountUseCase) *AccountCommand {
 		Use:   "account",
 		Short: "アカウント情報を同期します",
 		Long:  `外部APIからアカウント情報を取得し、データベースに保存します。`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := context.Background()
 			startTime := time.Now()
 

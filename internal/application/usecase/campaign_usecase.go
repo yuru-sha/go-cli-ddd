@@ -6,6 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
+
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/repository"
 )

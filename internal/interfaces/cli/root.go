@@ -21,8 +21,8 @@ func NewRootCommand() *RootCommand {
 	rootCmd := &cobra.Command{
 		Use:   "go-cli-ddd",
 		Short: "広告管理CLIアプリケーション",
-		Long: `Go 1.24.0、Cobra、GORM、Google Wireを使用したDDDとクリーンアーキテクチャに基づく広告管理CLIアプリケーションです。`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		Long:  `Go 1.24.0、Cobra、GORM、Google Wireを使用したDDDとクリーンアーキテクチャに基づく広告管理CLIアプリケーションです。`,
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			// 設定ファイルの読み込み
 			cfgOpts := config.NewConfigOptions(cfgFile, env)
 			cfg, err := config.LoadConfig(cfgOpts)

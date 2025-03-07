@@ -24,7 +24,7 @@ func NewCampaignCommand(campaignUseCase *usecase.CampaignUseCase) *CampaignComma
 		Use:   "campaign",
 		Short: "キャンペーン情報を同期します",
 		Long:  `アカウントごとに並列処理を行い、外部APIからキャンペーン情報を取得し、データベースに保存します。`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := context.Background()
 			startTime := time.Now()
 

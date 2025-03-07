@@ -24,7 +24,7 @@ func NewMasterCommand(masterUseCase *usecase.MasterUseCase) *MasterCommand {
 		Use:   "master",
 		Short: "マスター情報を同期します",
 		Long:  `アカウント情報とキャンペーン情報を順に同期します。`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// タイムアウト付きコンテキストの作成
 			ctx := context.Background()
 			if timeoutSec > 0 {

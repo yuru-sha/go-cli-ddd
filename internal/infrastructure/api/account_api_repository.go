@@ -16,10 +16,10 @@ import (
 
 // AccountAPIRepositoryImpl はAccountAPIRepositoryインターフェースの実装です
 type AccountAPIRepositoryImpl struct {
-	client  *http.Client
-	baseURL string
+	client   *http.Client
+	baseURL  string
 	endpoint string
-	mock    bool
+	mock     bool
 }
 
 // NewAccountAPIRepository は新しいAccountAPIRepositoryImplインスタンスを作成します
@@ -69,12 +69,12 @@ func (r *AccountAPIRepositoryImpl) FetchAccounts(ctx context.Context) ([]entity.
 }
 
 // fetchMockAccounts はモックのアカウントデータを返します
-func (r *AccountAPIRepositoryImpl) fetchMockAccounts(ctx context.Context) ([]entity.Account, error) {
+func (r *AccountAPIRepositoryImpl) fetchMockAccounts(_ context.Context) ([]entity.Account, error) {
 	log.Info().Msg("モックアカウントデータを使用します")
-	
+
 	// 現在時刻
 	now := time.Now()
-	
+
 	// モックデータ
 	mockAccounts := []entity.Account{
 		{
@@ -118,9 +118,9 @@ func (r *AccountAPIRepositoryImpl) fetchMockAccounts(ctx context.Context) ([]ent
 			UpdatedAt: now,
 		},
 	}
-	
+
 	// 少し遅延を入れてAPIリクエストをシミュレート
 	time.Sleep(500 * time.Millisecond)
-	
+
 	return mockAccounts, nil
 }

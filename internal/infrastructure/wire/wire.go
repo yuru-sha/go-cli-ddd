@@ -30,30 +30,30 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 		ProvideDatabaseConfig,
 		ProvideHTTPConfig,
 		ProvideAPIConfig,
-		
+
 		// データベース
 		persistence.NewDatabase,
 		persistence.NewAccountRepository,
 		persistence.NewCampaignRepository,
-		
+
 		// HTTP
 		httpClient.NewHTTPClient,
-		
+
 		// API
 		api.NewAccountAPIRepository,
 		api.NewCampaignAPIRepository,
-		
+
 		// ユースケース
 		usecase.NewAccountUseCase,
 		usecase.NewCampaignUseCase,
 		usecase.NewMasterUseCase,
-		
+
 		// コマンド
 		cli.NewRootCommand,
 		cli.NewAccountCommand,
 		cli.NewCampaignCommand,
 		cli.NewMasterCommand,
-		
+
 		// ルートコマンドの初期化
 		ProvideRootCommand,
 	)
@@ -61,7 +61,7 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 }
 
 // ProvideConfigOptions は設定オプションを提供します
-func ProvideConfigOptions(params AppParams) *config.ConfigOptions {
+func ProvideConfigOptions(params AppParams) *config.Options {
 	return config.NewConfigOptions(params.ConfigPath, params.Env)
 }
 
@@ -79,8 +79,6 @@ func ProvideHTTPConfig(cfg *config.Config) *config.HTTPConfig {
 func ProvideAPIConfig(cfg *config.Config) *config.APIConfig {
 	return &cfg.API
 }
-
-
 
 // ProvideRootCommand はルートコマンドを提供します
 func ProvideRootCommand(

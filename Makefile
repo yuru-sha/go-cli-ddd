@@ -55,7 +55,8 @@ lint:
 
 # ツールのインストール
 install-tools:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.5
+	golangci-lint --version
 	go install github.com/google/wire/cmd/wire@latest
 
 # CI用のターゲット

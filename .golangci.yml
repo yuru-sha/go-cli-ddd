@@ -1,0 +1,38 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gosec
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+    - bodyclose
+    - noctx
+    - prealloc
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/yuru-sha/go-cli-ddd
+  gosec:
+    excludes:
+      - G104 # Unhandled errors
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+  exclude-dirs:
+    - vendor
+
+run:
+  timeout: 5m
+  go: '1.24'

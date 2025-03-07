@@ -1,0 +1,38 @@
+# バイナリファイル
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# テスト関連
+*.test
+*.prof
+coverage.txt
+coverage.html
+
+# IDEとエディタ関連
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# Go関連
+/vendor/
+/go.sum
+
+# ログファイル
+*.log
+
+# 環境変数設定ファイル
+.env
+.env.local
+
+# 依存関係とビルドファイル
+/build/

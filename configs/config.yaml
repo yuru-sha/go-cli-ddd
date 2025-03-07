@@ -1,0 +1,55 @@
+local:
+  app:
+    name: "go-cli-ddd"
+    debug: true
+    log_level: "debug"
+
+  database:
+    dialect: "sqlite"
+    dsn: "file:go-cli-ddd.db?cache=shared"
+    log_level: "info"
+    auto_migrate: true
+
+  http:
+    timeout: 30
+    max_retries: 3
+    rate_limit:
+      qps: 10.0
+      burst: 3
+
+  api:
+    account:
+      base_url: "http://localhost:8080"
+      endpoint: "/api/accounts"
+    campaign:
+      base_url: "http://localhost:8080"
+      endpoint: "/api/campaigns"
+
+dev:
+  app:
+    debug: true
+    log_level: "info"
+
+  database:
+    dsn: "file:go-cli-ddd-dev.db?cache=shared"
+
+  api:
+    account:
+      base_url: "https://dev-api.example.com"
+    campaign:
+      base_url: "https://dev-api.example.com"
+
+prd:
+  app:
+    debug: false
+    log_level: "info"
+
+  database:
+    dsn: "file:go-cli-ddd-prd.db?cache=shared"
+    log_level: "error"
+
+  api:
+    account:
+      base_url: "https://api.example.com"
+    campaign:
+      base_url: "https://api.example.com"

@@ -1,0 +1,58 @@
+.PHONY: build clean run wire test lint gen-model init-db install-tools
+
+# デフォルトターゲット
+all: wire build
+
+# ビルド
+build:
+	go build -o bin/app ./cmd/app
+
+# クリーン
+clean:
+	rm -rf bin/
+	rm -f go-cli-ddd.db
+	# GORM genで生成されたファイルも削除
+	rm -rf internal/infrastructure/persistence/query/
+	rm -rf internal/infrastructure/persistence/model/
+
+# 実行
+run: build
+	./bin/app
+
+# Google Wireによる依存性注入コードの生成
+wire:
+	cd internal/infrastructure/wire && wire
+
+# GORM genによるモデル生成
+gen-model: init-db
+	go run ./cmd/gen/main.go
+
+# データベース初期化
+init-db:
+	mkdir -p internal/infrastructure/persistence/query
+	mkdir -p internal/infrastructure/persistence/model
+
+# テスト
+test:
+	go test -v ./...
+
+# リント
+lint:
+	golangci-lint run
+
+# ツールのインストール
+install-tools:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/google/wire/cmd/wire@latest
+
+# アカウントコマンドの実行
+run-account: build
+	./bin/go-cli-ddd account
+
+# キャンペーンコマンドの実行
+run-campaign: build
+	./bin/go-cli-ddd campaign
+
+# マスターコマンドの実行
+run-master: build
+	./bin/go-cli-ddd master

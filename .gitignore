@@ -25,7 +25,7 @@ Thumbs.db
 
 # Go関連
 /vendor/
-/go.sum
+#/go.sum
 
 # ログファイル
 *.log

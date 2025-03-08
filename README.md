@@ -1,46 +1,46 @@
 # Go CLI DDD
-
-Go 1.24.0、Cobra、GORM、Google Wireを使用したDDDとクリーンアーキテクチャに基づくCLIアプリケーションのサンプルです。
-
 ![Go CI](https://github.com/yuru-sha/go-cli-ddd/workflows/Go%20CI/badge.svg)
 
-## 技術スタック
+
+A sample CLI application based on DDD and Clean Architecture using Go 1.24.0, Cobra, GORM, and Google Wire.
+
+## Technology Stack
 
 - Go 1.24.0
-- [Cobra](https://github.com/spf13/cobra) - CLIフレームワーク
-- [GORM](https://gorm.io/) - ORMライブラリ
-- [Google Wire](https://github.com/google/wire) - 依存性注入ツール
-- [zerolog](https://github.com/rs/zerolog) - 高性能な構造化ロギングライブラリ
-- [golang.org/x/sync/errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup) - 並列処理のためのエラーハンドリング付きゴルーチングループ
-- [backoff/v4](https://github.com/cenkalti/backoff) - 指数関数的バックオフによるリトライ処理
-- [golang.org/x/time/rate](https://pkg.go.dev/golang.org/x/time/rate) - レートリミッター
-- [net/http](https://pkg.go.dev/net/http) - HTTPクライアント
-- [golangci-lint](https://golangci-lint.run/) - リントツール
-- [Mermaid](https://mermaid.js.org/) - テキストベースのダイアグラム作成ツール
-- [GitHub Actions](https://github.com/features/actions) - CI/CDプラットフォーム
+- [Cobra](https://github.com/spf13/cobra) - CLI framework
+- [GORM](https://gorm.io/) - ORM library
+- [Google Wire](https://github.com/google/wire) - Dependency injection tool
+- [zerolog](https://github.com/rs/zerolog) - High-performance structured logging library
+- [golang.org/x/sync/errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup) - Goroutine groups with error handling for parallel processing
+- [backoff/v4](https://github.com/cenkalti/backoff) - Retry processing with exponential backoff
+- [golang.org/x/time/rate](https://pkg.go.dev/golang.org/x/time/rate) - Rate limiter
+- [net/http](https://pkg.go.dev/net/http) - HTTP client
+- [golangci-lint](https://golangci-lint.run/) - Linting tool
+- [Mermaid](https://mermaid.js.org/) - Text-based diagram creation tool
+- [GitHub Actions](https://github.com/features/actions) - CI/CD platform
 
-## 設定ファイル
+## Configuration File
 
-アプリケーションは`configs/config.yaml`から設定を読み込みます。環境ごとに異なる設定を管理するために、以下のセクションが用意されています：
+The application loads settings from `configs/config.yaml`. The following sections are provided to manage different settings for each environment:
 
-- `local`: ローカル開発環境用のデフォルト設定
-- `dev`: 開発環境用設定
-- `prd`: 本番環境用設定
+- `local`: Default settings for local development environment
+- `dev`: Settings for development environment
+- `prd`: Settings for production environment
 
-環境を指定するには、`--env`フラグを使用します：
+To specify the environment, use the `--env` flag:
 
 ```bash
-# デフォルト設定（local環境）で実行
+# Run with default settings (local environment)
 ./app
 
-# 開発環境設定で実行
+# Run with development environment settings
 ./app --env dev
 
-# 本番環境設定で実行
+# Run with production environment settings
 ./app --env prd
 ```
 
-設定ファイルの例：
+Example configuration file:
 
 ```yaml
 local:
@@ -103,270 +103,274 @@ prd:
       api_key: "prd_api_key"
 ```
 
-## プロジェクト構造
+## Project Structure
 
-DDDとクリーンアーキテクチャの原則に従ったプロジェクト構造：
+Project structure following DDD and Clean Architecture principles:
 
 ```
 .
-├── cmd/                    # アプリケーションのエントリーポイント
-│   └── app/                # CLIアプリケーション
-├── configs/                # 設定ファイル
-└── internal/               # 非公開パッケージ
-    ├── domain/             # ドメイン層
-    │   ├── entity/         # エンティティ
-    │   ├── repository/     # リポジトリインターフェース
-    │   ├── service/        # ドメインサービス
-    │   └── valueobject/    # 値オブジェクト
-    ├── application/        # アプリケーション層
-    │   └── usecase/        # ユースケース
-    ├── infrastructure/     # インフラストラクチャ層
-    │   ├── config/         # 設定マネージャー
-    │   ├── http/           # HTTPクライアント
-    │   ├── logger/         # ロガー
-    │   ├── persistence/    # データベース実装
-    │   ├── notification/   # 通知機能
-    │   ├── api/           # 外部APIクライアント
-    │   └── wire/           # 依存性注入設定
-    └── interfaces/         # インターフェース層
-        └── cli/            # CLIインターフェース
+├── cmd/                    # Application entry points
+│   └── app/                # CLI application
+├── configs/                # Configuration files
+└── internal/               # Private packages
+    ├── domain/             # Domain layer
+    │   ├── entity/         # Entities
+    │   ├── repository/     # Repository interfaces
+    │   ├── service/        # Domain services
+    │   └── valueobject/    # Value objects
+    ├── application/        # Application layer
+    │   └── usecase/        # Use cases
+    ├── infrastructure/     # Infrastructure layer
+    │   ├── config/         # Configuration manager
+    │   ├── http/           # HTTP client
+    │   ├── logger/         # Logger
+    │   ├── persistence/    # Database implementations
+    │   ├── notification/   # Notification features
+    │   ├── api/            # External API clients
+    │   └── wire/           # Dependency injection configuration
+    └── interfaces/         # Interface layer
+        └── cli/            # CLI interface
 ```
 
-## 機能
+## Features
 
-このCLIアプリケーションは、広告管理システムの一部を実装しており、以下の機能を提供します：
+This CLI application implements part of an advertising management system and provides the following features:
 
-### アカウント管理
+### Account Management
 
-- アカウント情報の同期
-- アカウント情報の取得
-- 特定のアカウントIDによる同期
+- Account information synchronization
+- Retrieving account information
+- Synchronization by specific account ID
 
-### キャンペーン管理
+### Campaign Management
 
-- キャンペーン情報の同期
-- キャンペーン情報の取得
-- アカウントIDに紐づくキャンペーンの取得
+- Campaign information synchronization
+- Retrieving campaign information
+- Retrieving campaigns linked to an account ID
 
-## コマンド使用例
+## Command Usage Examples
 
-### アカウント同期
+### Account Synchronization
 
 ```bash
-# 全てのアカウントを同期
+# Synchronize all accounts
 ./bin/go-cli-ddd account
 
-# 特定のアカウントのみ同期
+# Synchronize only a specific account
 ./bin/go-cli-ddd account --id 123
 
-# 同期モードを指定して実行
+# Run with specified sync mode
 ./bin/go-cli-ddd account --mode diff
 
-# 強制同期（既存データを上書き）
+# Force synchronization (overwrite existing data)
 ./bin/go-cli-ddd account --force
 ```
 
-### キャンペーン同期
+### Campaign Synchronization
 
 ```bash
-# 全てのキャンペーンを同期
+# Synchronize all campaigns
 ./bin/go-cli-ddd campaign
 
-# 特定のアカウントに紐づくキャンペーンのみ同期
+# Synchronize only campaigns linked to a specific account
 ./bin/go-cli-ddd campaign --account-id 123
 ```
 
-## セットアップと開発
+## Setup and Development
 
-### 前提条件
+### Prerequisites
 
-- Go 1.24.0以上
+- Go 1.24.0 or higher
 - golangci-lint
 
-### セットアップ
+### Setup
 
 ```bash
-# リポジトリのクローン
+# Clone the repository
 git clone https://github.com/user/go-cli-ddd.git
 cd go-cli-ddd
 
-# 依存関係のインストール
+# Install dependencies
 make deps
 
-# 依存性注入コードの生成
+# Generate dependency injection code
 make wire
 
-# ビルド
+# Build
 make build
 
-# 実行
+# Run
 make run
 ```
 
-### 開発コマンド
+### Development Commands
 
 ```bash
-# テスト実行
+# Run tests
 make test
 
-# カバレッジ付きテスト実行
+# Run tests with coverage
 make test-coverage
 
-# Race Detectorを有効にしたテスト実行
+# Run tests with Race Detector enabled
 make test-race
 
-# 統合テスト実行
+# Run integration tests
 make test-integration
 
-# リント実行
+# Run linting
 make lint
 
-# クリーンアップ
+# Cleanup
 make clean
 
-# 全てのタスク実行
+# Run all tasks
 make all
 
-# CI用のタスク実行（lint, test-race, test-coverage, build）
+# Run CI tasks (lint, test-race, test-coverage, build)
 make ci
 ```
 
-## 継続的インテグレーション
+## Continuous Integration
 
-このプロジェクトはGitHub Actionsを使用して継続的インテグレーション（CI）を実装しています。以下のチェックが自動的に実行されます：
+This project implements continuous integration (CI) using GitHub Actions. The following checks are automatically performed:
 
-1. **Lint**: golangci-lintを使用したコード品質チェック
-2. **Test**: ユニットテストの実行（Race Detector有効）
-3. **Build**: アプリケーションのビルド
-4. **Integration**: 統合テストの実行
+1. **Lint**: Code quality check using golangci-lint
+2. **Test**: Running unit tests (with Race Detector enabled)
+3. **Build**: Building the application
+4. **Integration**: Running integration tests
 
-CIワークフローは以下のファイルで定義されています：
+The CI workflow is defined in the following file:
 - `.github/workflows/ci.yml`
 
-GitHub Actionsのワークフローは、mainブランチへのプッシュとプルリクエストで自動的に実行されます。
+GitHub Actions workflows are automatically executed on pushes to the main branch and pull requests.
 
-## アーキテクチャ
+## Architecture
 
-このプロジェクトは、ドメイン駆動設計（DDD）とクリーンアーキテクチャの原則に従っています：
+This project follows the principles of Domain-Driven Design (DDD) and Clean Architecture:
 
-1. **ドメイン層**: ビジネスロジックとルールを含む中心的な層
-   - エンティティ: ビジネスオブジェクト（Account, Campaign）
-   - リポジトリインターフェース: データアクセスの抽象化
-   - ドメインサービス: エンティティ間の操作
+1. **Domain Layer**: The central layer containing business logic and rules
+   - Entities: Business objects (Account, Campaign)
+   - Repository Interfaces: Abstraction of data access
+   - Domain Services: Operations between entities
 
-2. **アプリケーション層**: ユースケースの実装
-   - ユースケース: アプリケーションの具体的な機能
+2. **Application Layer**: Implementation of use cases
+   - Use Cases: Specific functionalities of the application
 
-3. **インフラストラクチャ層**: 技術的な実装の詳細
-   - リポジトリ実装: データベースアクセスの具体的な実装
-   - 依存性注入: コンポーネント間の依存関係の管理
+3. **Infrastructure Layer**: Details of technical implementation
+   - Repository Implementations: Concrete implementations of database access
+   - Dependency Injection: Management of dependencies between components
 
-4. **インターフェース層**: 外部とのインタラクション
-   - CLIインターフェース: ユーザーとのインタラクション
+4. **Interface Layer**: Interaction with the outside
+   - CLI Interface: Interaction with users
 
-## シーケンス図
+## Sequence Diagram
 
-このプロジェクトでは、主要な処理フローをマーメイド記法を使用したシーケンス図で表現しています。これにより、コードの実行フローを視覚的に理解しやすくなります。
+In this project, main processing flows are represented by sequence diagrams using Mermaid notation. This makes it easier to visually understand the execution flow of the code.
 
-### accountコマンドのシーケンス図
+### Sequence Diagram for the account Command
 
-以下は、`account`コマンドの実行フローを表すシーケンス図です：
+Below is a sequence diagram showing the execution flow of the `account` command:
 
 ```mermaid
 sequenceDiagram
     autonumber
 
-    %% 参加者の定義
-    actor ユーザー
+    %% Participant definitions
+    actor User
     participant CLI as "CLI<br>(cobra.Command)"
     participant AccountCommand as "AccountCommand<br>(interfaces/cli)"
     participant AccountUseCase as "AccountUseCase<br>(application/usecase)"
     participant AccountAPIRepo as "AccountAPIRepository<br>(infrastructure/api)"
     participant AccountRepo as "AccountRepository<br>(infrastructure/persistence)"
-    participant 外部API as "外部API<br>(HTTP Server)"
-    participant DB as "データベース<br>(SQLite)"
+    participant ExternalAPI as "External API<br>(HTTP Server)"
+    participant DB as "Database<br>(SQLite)"
 
-    %% シーケンスの開始
-    ユーザー->>+CLI: $ go-cli-ddd account [--id=ID] [--mode=MODE] [--force]
-    Note over ユーザー,CLI: コマンドライン引数を指定して実行
+    %% Start of sequence
+    User->>+CLI: $ go-cli-ddd account [--id=ID] [--mode=MODE] [--force]
+    Note over User,CLI: Execute with command line arguments
 
-    %% CLIからAccountCommandへの処理委譲
-    CLI->>+AccountCommand: RunE関数を実行
-    Note over AccountCommand: context.Backgroundを作成
-    Note over AccountCommand: 開始時間を記録
+    %% Delegation from CLI to AccountCommand
+    CLI->>+AccountCommand: Execute RunE function
+    Note over AccountCommand: Create context.Background
+    Note over AccountCommand: Record start time
 
-    %% フラグの処理
-    Note over AccountCommand: フラグの値をログに記録
+    %% Flag processing
+    Note over AccountCommand: Log flag values
 
-    %% 条件分岐
-    alt accountID > 0 (特定のアカウントのみ同期)
-        Note over AccountCommand: 特定のアカウントのみ同期するログを出力
+    %% Conditional branching
+    alt accountID > 0 (Sync specific account only)
+        Note over AccountCommand: Output log for syncing specific account only
         AccountCommand->>+AccountUseCase: SyncAccounts(ctx)
-    else accountID == 0 (全アカウント同期)
+    else accountID == 0 (Sync all accounts)
         AccountCommand->>+AccountUseCase: SyncAccounts(ctx)
     end
 
-    %% ユースケースの処理
-    Note over AccountUseCase: 同期開始ログを出力
+    %% Use case processing
+    Note over AccountUseCase: Output sync start log
 
-    %% 外部APIからデータ取得
+    %% Fetch data from external API
     AccountUseCase->>+AccountAPIRepo: FetchAccounts(ctx)
-    AccountAPIRepo->>+外部API: HTTP GET リクエスト
-    Note over AccountAPIRepo,外部API: 実際の実装ではモックデータを使用
+    AccountAPIRepo->>+ExternalAPI: HTTP GET request
+    Note over AccountAPIRepo,ExternalAPI: Mock data is used in actual implementation
 
-    alt 本番環境
-        外部API-->>-AccountAPIRepo: アカウントデータ (JSON)
-    else 開発環境
-        Note over AccountAPIRepo: fetchMockAccountsを呼び出し
-        AccountAPIRepo-->>AccountAPIRepo: モックデータを生成
+    alt Production environment
+        ExternalAPI-->>-AccountAPIRepo: Account data (JSON)
+    else Development environment
+        Note over AccountAPIRepo: Call fetchMockAccounts
+        AccountAPIRepo-->>AccountAPIRepo: Generate mock data
     end
 
-    AccountAPIRepo-->>-AccountUseCase: アカウントエンティティの配列
-    Note over AccountUseCase: 取得したアカウント数をログに出力
+    AccountAPIRepo-->>-AccountUseCase: Array of account entities
+    Note over AccountUseCase: Log the number of accounts retrieved
 
-    %% データベースへの保存
+    %% Save to database
     AccountUseCase->>+AccountRepo: SaveAll(ctx, accounts)
 
-    %% トランザクション処理
-    AccountRepo->>+DB: トランザクション開始
+    %% Transaction processing
+    AccountRepo->>+DB: Begin transaction
 
-    loop 各アカウントについて
-        alt 既存アカウントの場合
+    loop For each account
+        alt Existing account
             AccountRepo->>DB: UPDATE accounts SET ...
-        else 新規アカウントの場合
+        else New account
             AccountRepo->>DB: INSERT INTO accounts ...
         end
     end
 
-    DB-->>-AccountRepo: 保存結果
+    DB-->>-AccountRepo: Save result
 
-    alt エラーが発生した場合
-        AccountRepo-->>AccountUseCase: エラー返却
-        AccountUseCase-->>AccountCommand: エラー返却
-        AccountCommand-->>CLI: エラー返却
-        CLI-->>ユーザー: エラーメッセージ表示
-    else 成功した場合
-        AccountRepo-->>-AccountUseCase: 成功
-        Note over AccountUseCase: 同期完了ログを出力
-        AccountUseCase-->>-AccountCommand: 成功
-        Note over AccountCommand: 経過時間を計算
-        Note over AccountCommand: 完了ログを出力
-        AccountCommand-->>-CLI: 成功
-        CLI-->>-ユーザー: 成功メッセージ表示
+    alt If an error occurred
+        AccountRepo-->>AccountUseCase: Return error
+        AccountUseCase-->>AccountCommand: Return error
+        AccountCommand-->>CLI: Return error
+        CLI-->>User: Display error message
+    else If successful
+        AccountRepo-->>-AccountUseCase: Success
+        Note over AccountUseCase: Output sync completion log
+        AccountUseCase-->>-AccountCommand: Success
+        Note over AccountCommand: Calculate elapsed time
+        Note over AccountCommand: Output completion log
+        AccountCommand-->>-CLI: Success
+        CLI-->>-User: Display success message
     end
 ```
 
-このシーケンス図は以下の処理フローを表しています：
+This sequence diagram represents the following processing flow:
 
-1. ユーザーがコマンドラインから`account`コマンドを実行
-2. CLIフレームワーク（cobra）がAccountCommandのRunE関数を呼び出し
-3. AccountCommandがフラグを処理し、AccountUseCaseのSyncAccountsメソッドを呼び出し
-4. AccountUseCaseが外部APIからアカウント情報を取得（開発環境ではモックデータを使用）
-5. 取得したアカウント情報をデータベースに保存
-6. 処理結果をユーザーに表示
+1. User executes the `account` command from the command line
+2. CLI framework (cobra) calls the RunE function of AccountCommand
+3. AccountCommand processes flags and calls the SyncAccounts method of AccountUseCase
+4. AccountUseCase retrieves account information from external API (using mock data in development environment)
+5. Save the retrieved account information to the database
+6. Display the processing result to the user
 
-シーケンス図は、アプリケーションの動作を理解するための重要なドキュメントであり、新しい機能を追加する際の参考にもなります。
+Sequence diagrams are important documentation for understanding the application's behavior and serve as a reference when adding new features.
 
-## ライセンス
+## License
 
-MIT
+This project is released under the [MIT License](LICENSE).
+
+## Contribution
+
+Contributions are welcome! Please feel free to submit pull requests.

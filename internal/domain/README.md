@@ -6,7 +6,7 @@ The domain layer is the core layer of DDD architecture and is where business log
 
 ## Lightweight DDD and Anti-patterns
 
-The directory structure mentioned below shows traditional DDD implementation patterns, but from a lightweight DDD perspective, it may contain the following anti-patterns:
+The traditional DDD directory structure (shown in the "Directory Structure Pattern" section below) may contain the following anti-patterns from a lightweight DDD perspective:
 
 1. **Excessive layering**: Dividing code into many directories can make the code less readable and may force complex structures even for simple domains.
 

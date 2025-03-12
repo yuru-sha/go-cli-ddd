@@ -25,10 +25,13 @@
 - golang.org/x/sync/errgroup: ^0.12.0
 - backoff/v4: ^4.3.0（リトライ処理）
 - golang.org/x/time/rate: ^0.11.0（レートリミット）
+- net/http（HTTPクライアント）
 
 ## 開発ツール
 - golangci-lint（リントツール）
 - Go Modules（依存関係管理）
+- Mermaid（テキストベースのダイアグラム作成ツール）
+- GitHub Actions（CI/CDプラットフォーム）
 
 ---
 

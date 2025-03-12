@@ -3,6 +3,7 @@ module github.com/yuru-sha/go-cli-ddd
 go 1.24.0
 
 require (
+	dario.cat/mergo v1.0.1
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.9
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.18.7
@@ -27,7 +28,6 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.62 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect

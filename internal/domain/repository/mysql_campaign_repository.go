@@ -6,8 +6,8 @@ import (
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 )
 
-// CampaignRepository はキャンペーン情報の永続化を担当するリポジトリのインターフェースです
-type CampaignRepository interface {
+// MySQLCampaignRepository はキャンペーン情報の永続化を担当するリポジトリのインターフェースです
+type MySQLCampaignRepository interface {
 	// FindAll は全てのキャンペーンを取得します
 	FindAll(ctx context.Context) ([]entity.Campaign, error)
 

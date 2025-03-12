@@ -6,8 +6,8 @@ import (
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 )
 
-// AccountRepository はアカウント情報の永続化を担当するリポジトリのインターフェースです
-type AccountRepository interface {
+// MySQLAccountRepository はアカウント情報の永続化を担当するリポジトリのインターフェースです
+type MySQLAccountRepository interface {
 	// FindAll は全てのアカウントを取得します
 	FindAll(ctx context.Context) ([]entity.Account, error)
 
@@ -25,4 +25,7 @@ type AccountRepository interface {
 
 	// SaveAll は複数のアカウントを一括で保存します
 	SaveAll(ctx context.Context, accounts []entity.Account) error
+
+	// Save は単一のアカウントを保存します（存在しない場合は作成、存在する場合は更新）
+	Save(ctx context.Context, account entity.Account) error
 }

@@ -1,4 +1,4 @@
-package persistence
+package mysql
 
 import (
 	"github.com/rs/zerolog/log"

@@ -9,11 +9,14 @@ package wire
 import (
 	"github.com/spf13/cobra"
 	"github.com/yuru-sha/go-cli-ddd/internal/application/usecase"
-	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/api"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/api/externalapi1"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/http"
-	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/persistence"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/notification"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/persistence/mysql"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
 	"github.com/yuru-sha/go-cli-ddd/internal/interfaces/cli"
+	"gorm.io/gorm"
 )
 
 // Injectors from wire.go:
@@ -26,21 +29,26 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	databaseConfig := ProvideDatabaseConfig(configConfig)
-	db, err := persistence.NewDatabase(databaseConfig)
+	database, err := mysql.NewDatabase(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	accountRepository := persistence.NewAccountRepository(db)
-	apiConfig := ProvideAPIConfig(configConfig)
+	db := ProvideDatabaseConnection(database)
+	mySQLAccountRepository := mysql.NewAccountRepository(db)
 	httpConfig := ProvideHTTPConfig(configConfig)
 	client := http.NewHTTPClient(httpConfig)
-	accountAPIRepository := api.NewAccountAPIRepository(apiConfig, client)
-	accountUseCase := usecase.NewAccountUseCase(accountRepository, accountAPIRepository)
+	awsSecretsManager, err := secrets.NewAWSSecretsManager(configConfig)
+	if err != nil {
+		return nil, err
+	}
+	manager := ProvideSecretsManager(awsSecretsManager)
+	externalAPI1AccountRepository := externalapi1.NewAccountRepository(configConfig, client, manager)
+	notificationRepository := notification.NewRepository(configConfig)
+	accountUseCase := usecase.NewAccountUseCase(mySQLAccountRepository, externalAPI1AccountRepository, notificationRepository)
 	accountCommand := cli.NewAccountCommand(accountUseCase)
-	campaignRepository := persistence.NewCampaignRepository(db)
-	campaignAPIRepository := api.NewCampaignAPIRepository(apiConfig, client)
-	campaignUseCase := usecase.NewCampaignUseCase(campaignRepository, campaignAPIRepository, accountRepository)
+	mySQLCampaignRepository := mysql.NewCampaignRepository(db)
+	externalAPI1CampaignRepository := externalapi1.NewCampaignRepository(configConfig, client, manager)
+	campaignUseCase := usecase.NewCampaignUseCase(mySQLCampaignRepository, externalAPI1CampaignRepository, mySQLAccountRepository)
 	campaignCommand := cli.NewCampaignCommand(campaignUseCase)
 	masterUseCase := usecase.NewMasterUseCase(accountUseCase, campaignUseCase)
 	masterCommand := cli.NewMasterCommand(masterUseCase)
@@ -74,9 +82,19 @@ func ProvideHTTPConfig(cfg *config.Config) *config.HTTPConfig {
 	return &cfg.HTTP
 }
 
-// ProvideAPIConfig はAPI設定を提供します
-func ProvideAPIConfig(cfg *config.Config) *config.APIConfig {
-	return &cfg.API
+// ProvideAWSConfig はAWS設定を提供します
+func ProvideAWSConfig(cfg *config.Config) *config.AWSConfig {
+	return &cfg.AWS
+}
+
+// ProvideSecretsManager はSecretsManagerインターフェースを提供します
+func ProvideSecretsManager(sm *secrets.AWSSecretsManager) secrets.Manager {
+	return sm
+}
+
+// ProvideDatabaseConnection はデータベース接続を提供します
+func ProvideDatabaseConnection(db *mysql.Database) *gorm.DB {
+	return db.DB
 }
 
 // ProvideRootCommand はルートコマンドを提供します

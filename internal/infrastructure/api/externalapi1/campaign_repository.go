@@ -1,4 +1,4 @@
-package api
+package externalapi1
 
 import (
 	"context"
@@ -14,34 +14,37 @@ import (
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/repository"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
 )
 
-// CampaignAPIRepositoryImpl はCampaignAPIRepositoryインターフェースの実装です
-type CampaignAPIRepositoryImpl struct {
-	client   *http.Client
-	baseURL  string
-	endpoint string
-	mock     bool
+// CampaignRepositoryImpl はExternalAPI1CampaignRepositoryインターフェースの実装です
+type CampaignRepositoryImpl struct {
+	client    *http.Client
+	baseURL   string
+	mock      bool
+	apiClient *APIClient
 }
 
-// NewCampaignAPIRepository は新しいCampaignAPIRepositoryImplインスタンスを作成します
-func NewCampaignAPIRepository(cfg *config.APIConfig, httpClient *http.Client) repository.CampaignAPIRepository {
-	return &CampaignAPIRepositoryImpl{
-		client:   httpClient,
-		baseURL:  cfg.Campaign.BaseURL,
-		endpoint: cfg.Campaign.Endpoint,
-		mock:     true, // 常にモックを使用
+// NewCampaignRepository は新しいCampaignRepositoryImplインスタンスを作成します
+func NewCampaignRepository(cfg *config.Config, httpClient *http.Client, secretsManager secrets.Manager) repository.ExternalAPI1CampaignRepository {
+	apiClient := NewAPIClient(cfg, httpClient, secretsManager)
+
+	return &CampaignRepositoryImpl{
+		client:    httpClient,
+		baseURL:   cfg.ExternalAPI1.BaseURL,
+		mock:      true, // 常にモックを使用
+		apiClient: apiClient,
 	}
 }
 
 // FetchCampaignsByAccountID は外部APIから指定されたアカウントIDに関連するキャンペーン情報を取得します
-func (r *CampaignAPIRepositoryImpl) FetchCampaignsByAccountID(ctx context.Context, accountID uint) ([]entity.Campaign, error) {
+func (r *CampaignRepositoryImpl) FetchCampaignsByAccountID(ctx context.Context, accountID uint) ([]entity.Campaign, error) {
 	if r.mock {
 		return r.fetchMockCampaigns(ctx, accountID)
 	}
 
 	// 実際のAPIリクエストを行う場合の実装（今回は使用しない）
-	url := fmt.Sprintf("%s%s?account_id=%d", r.baseURL, r.endpoint, accountID)
+	url := fmt.Sprintf("%s%s?account_id=%d", r.baseURL, "/api/campaigns", accountID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		log.Error().Err(err).Str("url", url).Uint("account_id", accountID).Msg("APIリクエストの作成に失敗しました")
@@ -71,7 +74,7 @@ func (r *CampaignAPIRepositoryImpl) FetchCampaignsByAccountID(ctx context.Contex
 }
 
 // fetchMockCampaigns はモックのキャンペーンデータを返します
-func (r *CampaignAPIRepositoryImpl) fetchMockCampaigns(_ context.Context, accountID uint) ([]entity.Campaign, error) {
+func (r *CampaignRepositoryImpl) fetchMockCampaigns(_ context.Context, accountID uint) ([]entity.Campaign, error) {
 	log.Info().Uint("account_id", accountID).Msg("モックキャンペーンデータを使用します")
 
 	// 現在時刻

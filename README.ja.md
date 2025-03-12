@@ -102,6 +102,61 @@ prd:
       api_key: "prd_api_key"
 ```
 
+## AWS Secret Managerの使用方法
+
+このプロジェクトでは、AWS Secret Managerを使用して以下の認証情報を安全に管理することができます：
+
+1. データベース接続情報
+2. API認証トークン
+
+### 設定方法
+
+`configs/config.yaml`ファイルで以下の設定を行います：
+
+```yaml
+環境名:
+  aws:
+    region: "ap-northeast-1"  # AWSリージョン
+    secrets:
+      enabled: true  # Secret Managerを有効にする
+
+  database:
+    secret_id: "環境名/database/アプリ名"  # データベース接続情報のシークレットID
+
+  api:
+    token_secret_id: "環境名/api/token"  # API認証トークンのシークレットID
+```
+
+### シークレットの形式
+
+#### データベース接続情報
+
+```json
+{
+  "username": "dbuser",
+  "password": "dbpassword",
+  "host": "db.example.com",
+  "port": 3306,
+  "dbname": "mydatabase"
+}
+```
+
+#### API認証トークン
+
+```json
+{
+  "token": "api-token-value",
+  "bearer_token": "bearer-token-value",
+  "access_key": "access-key-value",
+  "secret_key": "secret-key-value"
+}
+```
+
+### 認証情報の取得方法
+
+AWS認証情報は環境変数または`~/.aws/credentials`ファイルから自動的に読み込まれます。
+詳細は[AWS SDK for Go V2のドキュメント](https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/)を参照してください。
+
 ## プロジェクト構造
 
 DDDとクリーンアーキテクチャの原則に従ったプロジェクト構造：

@@ -14,9 +14,9 @@ import (
 func NewAccountCommand(accountUseCase *usecase.AccountUseCase) *AccountCommand {
 	// フラグ変数の定義
 	var (
-		accountID int
-		syncMode  string
-		force     bool
+		accountIDs []int
+		syncMode   string
+		force      bool
 	)
 
 	cmd := &cobra.Command{
@@ -27,16 +27,15 @@ func NewAccountCommand(accountUseCase *usecase.AccountUseCase) *AccountCommand {
 			ctx := context.Background()
 			startTime := time.Now()
 
-			log.Info().Int("account_id", accountID).Str("sync_mode", syncMode).Bool("force", force).Msg("アカウント同期コマンドを実行します")
+			log.Info().Ints("account_ids", accountIDs).Str("sync_mode", syncMode).Bool("force", force).Msg("アカウント同期コマンドを実行します")
 
 			// アカウント情報の同期
 			// 引数に基づいて処理を分岐
 			var err error
-			if accountID > 0 {
+			if len(accountIDs) > 0 {
 				// 特定のアカウントのみ同期
-				log.Info().Int("account_id", accountID).Msg("指定されたアカウントのみ同期します")
-				// 実際の実装ではここでaccountIDを使った処理を行う
-				err = accountUseCase.SyncAccounts(ctx)
+				log.Info().Ints("account_ids", accountIDs).Msg("指定されたアカウントのみ同期します")
+				err = accountUseCase.SyncAccountsByIDs(ctx, accountIDs)
 			} else {
 				// 全アカウント同期
 				err = accountUseCase.SyncAccounts(ctx)
@@ -54,7 +53,7 @@ func NewAccountCommand(accountUseCase *usecase.AccountUseCase) *AccountCommand {
 	}
 
 	// フラグの設定
-	cmd.Flags().IntVar(&accountID, "id", 0, "同期するアカウントID（0の場合は全アカウント）")
+	cmd.Flags().IntSliceVar(&accountIDs, "id", []int{}, "同期するアカウントID（指定しない場合は全アカウント）")
 	cmd.Flags().StringVar(&syncMode, "mode", "full", "同期モード（full: 全同期, diff: 差分同期）")
 	cmd.Flags().BoolVar(&force, "force", false, "強制同期フラグ（既存データを上書き）")
 

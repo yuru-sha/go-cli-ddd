@@ -5,16 +5,36 @@ Go 1.24.0、Cobra、GORM、Google Wireを使用したDDDとクリーンアーキ
 
 ## 技術スタック
 
+### コア技術
 - Go 1.24.0
-- [Cobra](https://github.com/spf13/cobra) - CLIフレームワーク
-- [GORM](https://gorm.io/) - ORMライブラリ
-- [Google Wire](https://github.com/google/wire) - 依存性注入ツール
-- [zerolog](https://github.com/rs/zerolog) - 高性能な構造化ロギングライブラリ
-- [golang.org/x/sync/errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup) - 並列処理のためのエラーハンドリング付きゴルーチングループ
-- [backoff/v4](https://github.com/cenkalti/backoff) - 指数関数的バックオフによるリトライ処理
-- [golang.org/x/time/rate](https://pkg.go.dev/golang.org/x/time/rate) - レートリミッター
+- DDD（ドメイン駆動設計）
+- クリーンアーキテクチャ
+- **AIモデル: claude-3-7-sonnet-20250219 (Anthropic Messages API 2023-06-01) ← バージョン変更禁止**
+
+### CLIフレームワーク
+- [Cobra](https://github.com/spf13/cobra): ^1.9.1 - CLIフレームワーク
+- [Viper](https://github.com/spf13/viper): ^1.19.0 - 設定管理
+
+### データベース
+- SQLite: ^1.5.7（GORM SQLiteドライバー）
+- [GORM](https://gorm.io/): ^1.25.12 - ORMライブラリ
+- GORM Gen: ^0.3.26 - コード生成
+
+### 依存性注入
+- [Google Wire](https://github.com/google/wire): ^0.6.0 - 依存性注入ツール
+
+### ロギング
+- [zerolog](https://github.com/rs/zerolog): ^1.33.0 - 高性能な構造化ロギングライブラリ
+
+### 並列処理・非同期処理
+- [golang.org/x/sync/errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup): ^0.12.0 - 並列処理のためのエラーハンドリング付きゴルーチングループ
+- [backoff/v4](https://github.com/cenkalti/backoff): ^4.3.0 - 指数関数的バックオフによるリトライ処理
+- [golang.org/x/time/rate](https://pkg.go.dev/golang.org/x/time/rate): ^0.11.0 - レートリミッター
 - [net/http](https://pkg.go.dev/net/http) - HTTPクライアント
+
+### 開発ツール
 - [golangci-lint](https://golangci-lint.run/) - リントツール
+- Go Modules - 依存関係管理
 - [Mermaid](https://mermaid.js.org/) - テキストベースのダイアグラム作成ツール
 - [GitHub Actions](https://github.com/features/actions) - CI/CDプラットフォーム
 
@@ -101,6 +121,61 @@ prd:
       base_url: "https://api.example.com"
       api_key: "prd_api_key"
 ```
+
+## AWS Secret Managerの使用方法
+
+このプロジェクトでは、AWS Secret Managerを使用して以下の認証情報を安全に管理することができます：
+
+1. データベース接続情報
+2. API認証トークン
+
+### 設定方法
+
+`configs/config.yaml`ファイルで以下の設定を行います：
+
+```yaml
+環境名:
+  aws:
+    region: "ap-northeast-1"  # AWSリージョン
+    secrets:
+      enabled: true  # Secret Managerを有効にする
+
+  database:
+    secret_id: "環境名/database/アプリ名"  # データベース接続情報のシークレットID
+
+  api:
+    token_secret_id: "環境名/api/token"  # API認証トークンのシークレットID
+```
+
+### シークレットの形式
+
+#### データベース接続情報
+
+```json
+{
+  "username": "dbuser",
+  "password": "dbpassword",
+  "host": "db.example.com",
+  "port": 3306,
+  "dbname": "mydatabase"
+}
+```
+
+#### API認証トークン
+
+```json
+{
+  "token": "api-token-value",
+  "bearer_token": "bearer-token-value",
+  "access_key": "access-key-value",
+  "secret_key": "secret-key-value"
+}
+```
+
+### 認証情報の取得方法
+
+AWS認証情報は環境変数または`~/.aws/credentials`ファイルから自動的に読み込まれます。
+詳細は[AWS SDK for Go V2のドキュメント](https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/)を参照してください。
 
 ## プロジェクト構造
 
@@ -277,41 +352,73 @@ sequenceDiagram
 
     %% 参加者の定義
     actor ユーザー
-    participant CLI as "CLI<br>(cobra.Command)"
+    participant CLI as "CLI<br>(cobra v1.9.1)"
+    participant Config as "Config<br>(viper v1.19.0)"
     participant AccountCommand as "AccountCommand<br>(interfaces/cli)"
     participant AccountUseCase as "AccountUseCase<br>(application/usecase)"
     participant AccountAPIRepo as "AccountAPIRepository<br>(infrastructure/api)"
+    participant HTTPClient as "HTTPClient<br>(net/http)"
+    participant RateLimiter as "RateLimiter<br>(rate v0.11.0)"
+    participant Backoff as "Backoff<br>(backoff v4.3.0)"
     participant AccountRepo as "AccountRepository<br>(infrastructure/persistence)"
+    participant DB as "Database<br>(GORM v1.25.12)"
+    participant Logger as "Logger<br>(zerolog v1.33.0)"
     participant 外部API as "外部API<br>(HTTP Server)"
-    participant DB as "データベース<br>(SQLite)"
 
     %% シーケンスの開始
-    ユーザー->>+CLI: $ go-cli-ddd account [--id=ID] [--mode=MODE] [--force]
+    ユーザー->>+CLI: $ go-cli-ddd account [--id=ID] [--mode=MODE] [--force] [--env=ENV]
     Note over ユーザー,CLI: コマンドライン引数を指定して実行
+
+    %% 設定の読み込み
+    CLI->>+Config: 設定ファイルの読み込み (configs/config.yaml)
+    Config-->>-CLI: 環境に応じた設定を返却
 
     %% CLIからAccountCommandへの処理委譲
     CLI->>+AccountCommand: RunE関数を実行
+    AccountCommand->>+Logger: ログ初期化 (log_level設定を適用)
+    Logger-->>-AccountCommand: ロガーインスタンス
+
     Note over AccountCommand: context.Backgroundを作成
     Note over AccountCommand: 開始時間を記録
 
     %% フラグの処理
     Note over AccountCommand: フラグの値をログに記録
+    AccountCommand->>+Logger: フラグ情報をログ出力
+    Logger-->>-AccountCommand: ログ出力完了
 
     %% 条件分岐
     alt accountID > 0 (特定のアカウントのみ同期)
-        Note over AccountCommand: 特定のアカウントのみ同期するログを出力
-        AccountCommand->>+AccountUseCase: SyncAccounts(ctx)
+        AccountCommand->>+Logger: 特定のアカウントのみ同期するログを出力
+        Logger-->>-AccountCommand: ログ出力完了
+        AccountCommand->>+AccountUseCase: SyncAccount(ctx, accountID, mode, force)
     else accountID == 0 (全アカウント同期)
-        AccountCommand->>+AccountUseCase: SyncAccounts(ctx)
+        AccountCommand->>+Logger: 全アカウント同期ログを出力
+        Logger-->>-AccountCommand: ログ出力完了
+        AccountCommand->>+AccountUseCase: SyncAccounts(ctx, mode, force)
     end
 
     %% ユースケースの処理
-    Note over AccountUseCase: 同期開始ログを出力
+    AccountUseCase->>+Logger: 同期開始ログを出力
+    Logger-->>-AccountUseCase: ログ出力完了
 
     %% 外部APIからデータ取得
-    AccountUseCase->>+AccountAPIRepo: FetchAccounts(ctx)
+    AccountUseCase->>+AccountAPIRepo: FetchAccounts(ctx, filter)
+
+    %% HTTPクライアントの設定
+    AccountAPIRepo->>+HTTPClient: 新規HTTPクライアント作成
+    HTTPClient-->>-AccountAPIRepo: HTTPクライアントインスタンス
+
+    %% レートリミッターの設定
+    AccountAPIRepo->>+RateLimiter: NewLimiter(rate, burst)
+    RateLimiter-->>-AccountAPIRepo: レートリミッターインスタンス
+
+    %% リトライ設定
+    AccountAPIRepo->>+Backoff: NewExponentialBackOff()
+    Backoff-->>-AccountAPIRepo: バックオフインスタンス
+
+    %% API呼び出し
     AccountAPIRepo->>+外部API: HTTP GET リクエスト
-    Note over AccountAPIRepo,外部API: 実際の実装ではモックデータを使用
+    Note over AccountAPIRepo,外部API: レートリミットとリトライ処理を適用
 
     alt 本番環境
         外部API-->>-AccountAPIRepo: アカウントデータ (JSON)
@@ -321,35 +428,50 @@ sequenceDiagram
     end
 
     AccountAPIRepo-->>-AccountUseCase: アカウントエンティティの配列
-    Note over AccountUseCase: 取得したアカウント数をログに出力
+    AccountUseCase->>+Logger: 取得したアカウント数をログに出力
+    Logger-->>-AccountUseCase: ログ出力完了
 
     %% データベースへの保存
-    AccountUseCase->>+AccountRepo: SaveAll(ctx, accounts)
+    AccountUseCase->>+AccountRepo: SaveAll(ctx, accounts, mode, force)
 
     %% トランザクション処理
     AccountRepo->>+DB: トランザクション開始
+    DB-->>-AccountRepo: トランザクションインスタンス
 
     loop 各アカウントについて
-        alt 既存アカウントの場合
-            AccountRepo->>DB: UPDATE accounts SET ...
-        else 新規アカウントの場合
-            AccountRepo->>DB: INSERT INTO accounts ...
+        alt mode == "diff" かつ 既存アカウントの場合
+            AccountRepo->>DB: 差分のみ更新
+        else mode == "full" または 新規アカウントの場合
+            alt 既存アカウントの場合
+                AccountRepo->>DB: UPDATE accounts SET ...
+            else 新規アカウントの場合
+                AccountRepo->>DB: INSERT INTO accounts ...
+            end
         end
     end
 
-    DB-->>-AccountRepo: 保存結果
+    AccountRepo->>DB: トランザクションコミット
+    DB-->>AccountRepo: コミット結果
 
     alt エラーが発生した場合
+        AccountRepo->>DB: トランザクションロールバック
+        DB-->>AccountRepo: ロールバック結果
         AccountRepo-->>AccountUseCase: エラー返却
+        AccountUseCase->>+Logger: エラーログを出力
+        Logger-->>-AccountUseCase: ログ出力完了
         AccountUseCase-->>AccountCommand: エラー返却
+        AccountCommand->>+Logger: エラーログを出力
+        Logger-->>-AccountCommand: ログ出力完了
         AccountCommand-->>CLI: エラー返却
         CLI-->>ユーザー: エラーメッセージ表示
     else 成功した場合
-        AccountRepo-->>-AccountUseCase: 成功
-        Note over AccountUseCase: 同期完了ログを出力
+        AccountRepo-->>-AccountUseCase: 成功 (保存したアカウント数)
+        AccountUseCase->>+Logger: 同期完了ログを出力 (処理件数含む)
+        Logger-->>-AccountUseCase: ログ出力完了
         AccountUseCase-->>-AccountCommand: 成功
         Note over AccountCommand: 経過時間を計算
-        Note over AccountCommand: 完了ログを出力
+        AccountCommand->>+Logger: 完了ログを出力 (経過時間含む)
+        Logger-->>-AccountCommand: ログ出力完了
         AccountCommand-->>-CLI: 成功
         CLI-->>-ユーザー: 成功メッセージ表示
     end
@@ -357,12 +479,18 @@ sequenceDiagram
 
 このシーケンス図は以下の処理フローを表しています：
 
-1. ユーザーがコマンドラインから`account`コマンドを実行
-2. CLIフレームワーク（cobra）がAccountCommandのRunE関数を呼び出し
-3. AccountCommandがフラグを処理し、AccountUseCaseのSyncAccountsメソッドを呼び出し
-4. AccountUseCaseが外部APIからアカウント情報を取得（開発環境ではモックデータを使用）
-5. 取得したアカウント情報をデータベースに保存
-6. 処理結果をユーザーに表示
+1. ユーザーがコマンドラインから`account`コマンドを実行し、必要に応じてフラグを指定
+2. 設定ファイル（config.yaml）から環境に応じた設定を読み込み
+3. CLIフレームワーク（cobra）がAccountCommandのRunE関数を呼び出し
+4. ロガー（zerolog）を初期化し、処理開始のログを出力
+5. AccountCommandがフラグを処理し、AccountUseCaseのメソッドを呼び出し
+6. AccountUseCaseが外部APIからアカウント情報を取得
+   - HTTPクライアント、レートリミッター、リトライ処理を適用
+   - 開発環境ではモックデータを使用
+7. 取得したアカウント情報をデータベース（GORM）に保存
+   - トランザクション処理を適用
+   - 同期モード（diff/full）に応じた処理
+8. 処理結果をログに出力し、ユーザーに表示
 
 シーケンス図は、アプリケーションの動作を理解するための重要なドキュメントであり、新しい機能を追加する際の参考にもなります。
 
@@ -373,3 +501,12 @@ sequenceDiagram
 ## 貢献
 
 貢献を歓迎します！ぜひプルリクエストを送ってください。
+
+## API バージョン管理
+### 重要な制約事項
+- 外部サービスとの連携は `internal/infrastructure/api/` ディレクトリ内で実装
+- これらのファイルは変更禁止（変更が必要な場合は承認が必要）：
+  - config.go  - 環境設定の一元管理
+
+### 実装規則
+- 環境変数の利用は config.go 経由のみ許可

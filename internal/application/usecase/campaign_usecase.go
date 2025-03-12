@@ -13,16 +13,16 @@ import (
 
 // CampaignUseCase はキャンペーン関連のユースケースを実装します
 type CampaignUseCase struct {
-	campaignRepo    repository.CampaignRepository
-	campaignAPIRepo repository.CampaignAPIRepository
-	accountRepo     repository.AccountRepository
+	campaignRepo    repository.MySQLCampaignRepository
+	campaignAPIRepo repository.ExternalAPI1CampaignRepository
+	accountRepo     repository.MySQLAccountRepository
 }
 
 // NewCampaignUseCase は CampaignUseCase の新しいインスタンスを作成します
 func NewCampaignUseCase(
-	campaignRepo repository.CampaignRepository,
-	campaignAPIRepo repository.CampaignAPIRepository,
-	accountRepo repository.AccountRepository,
+	campaignRepo repository.MySQLCampaignRepository,
+	campaignAPIRepo repository.ExternalAPI1CampaignRepository,
+	accountRepo repository.MySQLAccountRepository,
 ) *CampaignUseCase {
 	return &CampaignUseCase{
 		campaignRepo:    campaignRepo,

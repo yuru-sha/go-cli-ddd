@@ -18,7 +18,6 @@ func main() {
 	for i, arg := range os.Args {
 		if arg == "--env" && i+1 < len(os.Args) {
 			env = os.Args[i+1]
-			break
 		}
 	}
 

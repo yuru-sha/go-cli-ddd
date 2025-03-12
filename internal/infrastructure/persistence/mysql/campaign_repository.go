@@ -1,4 +1,4 @@
-package persistence
+package mysql
 
 import (
 	"context"
@@ -11,13 +11,13 @@ import (
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/repository"
 )
 
-// CampaignRepositoryImpl はCampaignRepositoryインターフェースの実装です
+// CampaignRepositoryImpl はMySQLCampaignRepositoryインターフェースの実装です
 type CampaignRepositoryImpl struct {
 	db *gorm.DB
 }
 
 // NewCampaignRepository は新しいCampaignRepositoryImplインスタンスを作成します
-func NewCampaignRepository(db *gorm.DB) repository.CampaignRepository {
+func NewCampaignRepository(db *gorm.DB) repository.MySQLCampaignRepository {
 	return &CampaignRepositoryImpl{db: db}
 }
 

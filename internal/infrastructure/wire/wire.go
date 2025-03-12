@@ -6,12 +6,15 @@ package wire
 import (
 	"github.com/google/wire"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/application/usecase"
-	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/api"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/api/externalapi1"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 	httpClient "github.com/yuru-sha/go-cli-ddd/internal/infrastructure/http"
-	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/persistence"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/notification"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/persistence/mysql"
+	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
 	"github.com/yuru-sha/go-cli-ddd/internal/interfaces/cli"
 )
 
@@ -27,21 +30,27 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 		// 設定
 		ProvideConfigOptions,
 		config.LoadConfig,
-		ProvideDatabaseConfig,
 		ProvideHTTPConfig,
-		ProvideAPIConfig,
+
+		// シークレットマネージャー
+		secrets.NewAWSSecretsManager,
+		ProvideSecretsManager,
 
 		// データベース
-		persistence.NewDatabase,
-		persistence.NewAccountRepository,
-		persistence.NewCampaignRepository,
+		mysql.NewDatabase,
+		ProvideDatabaseConnection,
+		mysql.NewAccountRepository,
+		mysql.NewCampaignRepository,
 
 		// HTTP
 		httpClient.NewHTTPClient,
 
-		// API
-		api.NewAccountAPIRepository,
-		api.NewCampaignAPIRepository,
+		// ExternalAPI1
+		externalapi1.NewAccountRepository,
+		externalapi1.NewCampaignRepository,
+
+		// 通知
+		notification.NewRepository,
 
 		// ユースケース
 		usecase.NewAccountUseCase,
@@ -75,9 +84,19 @@ func ProvideHTTPConfig(cfg *config.Config) *config.HTTPConfig {
 	return &cfg.HTTP
 }
 
-// ProvideAPIConfig はAPI設定を提供します
-func ProvideAPIConfig(cfg *config.Config) *config.APIConfig {
-	return &cfg.API
+// ProvideAWSConfig はAWS設定を提供します
+func ProvideAWSConfig(cfg *config.Config) *config.AWSConfig {
+	return &cfg.AWS
+}
+
+// ProvideSecretsManager はSecretsManagerインターフェースを提供します
+func ProvideSecretsManager(sm *secrets.AWSSecretsManager) secrets.Manager {
+	return sm
+}
+
+// ProvideDatabaseConnection はデータベース接続を提供します
+func ProvideDatabaseConnection(db *mysql.Database) *gorm.DB {
+	return db.DB
 }
 
 // ProvideRootCommand はルートコマンドを提供します

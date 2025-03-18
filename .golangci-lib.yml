@@ -1,0 +1,77 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  modules-download-mode: readonly
+  go: '1.24'
+  # テストファイルも含めて厳密にチェック
+  tests: true
+  # 自動生成されたファイルもチェック
+  skip-files:
+    - ".*\\.generated\\.go$"
+
+linters:
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - errcheck
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - gosec
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - varcheck
+    # ライブラリ向けの追加リンター
+    - godot        # コメントのピリオドをチェック
+    - gocognit     # 認知的複雑さをチェック
+    - revive       # より包括的なlintツール
+    - prealloc     # スライスの事前割り当ての最適化
+    - unconvert    # 不要な型変換を検出
+    - unparam      # 未使用のパラメータを検出
+    - exportloopref # ループ変数の参照に関する問題を検出
+    - misspell     # スペルミスをチェック
+
+linters-settings:
+  staticcheck:
+    checks: ["all"]
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+    settings:
+      rangeValCopy:
+        sizeThreshold: 32
+  gocognit:
+    # 認知的複雑さの閾値
+    min-complexity: 15
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+  gosec:
+    excludes:
+      - G104 # Audit errors not checked
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+  # 重要度の高い問題のみを表示
+  exclude-use-default: false
+  exclude:
+    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"

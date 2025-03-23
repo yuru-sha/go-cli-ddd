@@ -36,3 +36,6 @@ Thumbs.db
 
 # 依存関係とビルドファイル
 /build/
+
+# Spec Story(cursor extension)
+.specstory/

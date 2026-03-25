@@ -19,9 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Injectors from wire.go:
-
-// InitializeApp はアプリケーションを初期化します
+// InitializeApp はアプリケーションを初期化します。
 func InitializeApp(params AppParams) (*cobra.Command, error) {
 	rootCommand := cli.NewRootCommand()
 	options := ProvideConfigOptions(params)
@@ -45,67 +43,64 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 	externalAPI1AccountRepository := externalapi1.NewAccountRepository(configConfig, client, manager)
 	notificationRepository := notification.NewRepository(configConfig)
 	accountUseCase := usecase.NewAccountUseCase(mySQLAccountRepository, externalAPI1AccountRepository, notificationRepository)
-	accountCommand := cli.NewAccountCommand(accountUseCase)
+	accountHandler := cli.NewAccountHandler(accountUseCase)
+	accountCommand := cli.NewAccountCommand(accountHandler)
 	mySQLCampaignRepository := mysql.NewCampaignRepository(db)
 	externalAPI1CampaignRepository := externalapi1.NewCampaignRepository(configConfig, client, manager)
 	campaignUseCase := usecase.NewCampaignUseCase(mySQLCampaignRepository, externalAPI1CampaignRepository, mySQLAccountRepository)
-	campaignCommand := cli.NewCampaignCommand(campaignUseCase)
+	campaignHandler := cli.NewCampaignHandler(campaignUseCase)
+	campaignCommand := cli.NewCampaignCommand(campaignHandler)
 	masterUseCase := usecase.NewMasterUseCase(accountUseCase, campaignUseCase)
-	masterCommand := cli.NewMasterCommand(masterUseCase)
-	command, err := ProvideRootCommand(rootCommand, accountCommand, campaignCommand, masterCommand)
+	masterHandler := cli.NewMasterHandler(masterUseCase)
+	masterCommand := cli.NewMasterCommand(masterHandler)
+	commandModules := ProvideCommandModules(accountCommand, campaignCommand, masterCommand)
+	command, err := ProvideRootCommand(rootCommand, commandModules)
 	if err != nil {
 		return nil, err
 	}
 	return command, nil
 }
 
-// wire.go:
-
-// AppParams はアプリケーションのパラメータを表します
 type AppParams struct {
 	ConfigPath string
 	Env        string
 }
 
-// ProvideConfigOptions は設定オプションを提供します
 func ProvideConfigOptions(params AppParams) *config.Options {
 	return config.NewConfigOptions(params.ConfigPath, params.Env)
 }
 
-// ProvideDatabaseConfig はデータベース設定を提供します
 func ProvideDatabaseConfig(cfg *config.Config) *config.DatabaseConfig {
 	return &cfg.Database
 }
 
-// ProvideHTTPConfig はHTTP設定を提供します
 func ProvideHTTPConfig(cfg *config.Config) *config.HTTPConfig {
 	return &cfg.HTTP
 }
 
-// ProvideAWSConfig はAWS設定を提供します
 func ProvideAWSConfig(cfg *config.Config) *config.AWSConfig {
 	return &cfg.AWS
 }
 
-// ProvideSecretsManager はSecretsManagerインターフェースを提供します
 func ProvideSecretsManager(sm *secrets.AWSSecretsManager) secrets.Manager {
 	return sm
 }
 
-// ProvideDatabaseConnection はデータベース接続を提供します
 func ProvideDatabaseConnection(db *mysql.Database) *gorm.DB {
 	return db.DB
 }
 
-// ProvideRootCommand はルートコマンドを提供します
-func ProvideRootCommand(
-	rootCmd *cli.RootCommand,
+func ProvideCommandModules(
 	accountCmd *cli.AccountCommand,
 	campaignCmd *cli.CampaignCommand,
 	masterCmd *cli.MasterCommand,
-) (*cobra.Command, error) {
-	rootCmd.Cmd.AddCommand(accountCmd.Cmd)
-	rootCmd.Cmd.AddCommand(campaignCmd.Cmd)
-	rootCmd.Cmd.AddCommand(masterCmd.Cmd)
+) []cli.CommandModule {
+	return []cli.CommandModule{accountCmd, campaignCmd, masterCmd}
+}
+
+func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cobra.Command, error) {
+	for _, module := range modules {
+		module.Register(rootCmd.Cmd)
+	}
 	return rootCmd.Cmd, nil
 }

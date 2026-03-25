@@ -27,11 +27,17 @@ local:
 
   external_api1:
     base_url: "http://localhost:8080"
+    token: ""
     token_secret_id: ""
 
   external_api2:
     base_url: "https://api.example.com"
-    token_secret_id: "prd/api/token"
+    oauth2_secret_id: ""
+    client_id: ""
+    client_secret: ""
+    refresh_token: ""
+    developer_token: ""
+    login_customer_id: ""
 
   notification:
     slack:
@@ -67,11 +73,12 @@ dev:
 
   external_api1:
     base_url: "https://dev-api.example.com"
+    token: ""
     token_secret_id: "dev/api/token"
 
   external_api2:
     base_url: "https://dev-api.example.com"
-    token_secret_id: "prd/api/token"
+    oauth2_secret_id: "dev/external-api2/oauth"
 
   notification:
     slack:
@@ -109,11 +116,12 @@ prd:
 
   external_api1:
     base_url: "https://api.example.com"
+    token: ""
     token_secret_id: "prd/api/token"
 
   external_api2:
     base_url: "https://api.example.com"
-    token_secret_id: "prd/api/token"
+    oauth2_secret_id: "prd/external-api2/oauth"
 
   notification:
     slack:

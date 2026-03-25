@@ -1,3 +1,4 @@
+// Package entity defines domain entities.
 package entity
 
 import (

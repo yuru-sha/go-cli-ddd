@@ -1,50 +1,74 @@
+// Package logger configures the application's default slog logger.
 package logger
 
 import (
+	"context"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
-	"time"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
-// InitLogger はアプリケーションのロガーを初期化します
+// InitLogger はアプリケーションのロガーを初期化します。
 func InitLogger(logLevel string, debug bool) {
-	// ログレベルの設定
 	level := getLogLevel(logLevel)
-	zerolog.SetGlobalLevel(level)
 
-	// 開発モードの場合はより読みやすい出力形式を使用
 	var output io.Writer = os.Stdout
-	if debug {
-		output = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
-		}
+	handlerOptions := &slog.HandlerOptions{
+		Level: level,
 	}
 
-	// グローバルロガーの設定
-	log.Logger = zerolog.New(output).With().Timestamp().Logger()
+	var handler slog.Handler
+	if debug {
+		handler = slog.NewTextHandler(output, handlerOptions)
+	} else {
+		handler = slog.NewJSONHandler(output, handlerOptions)
+	}
+
+	slog.SetDefault(slog.New(handler))
 }
 
-// getLogLevel は文字列のログレベルをzerolog.Levelに変換します
-func getLogLevel(level string) zerolog.Level {
+func getLogLevel(level string) slog.Level {
 	switch strings.ToLower(level) {
 	case "debug":
-		return zerolog.DebugLevel
+		return slog.LevelDebug
 	case "info":
-		return zerolog.InfoLevel
+		return slog.LevelInfo
 	case "warn":
-		return zerolog.WarnLevel
+		return slog.LevelWarn
 	case "error":
-		return zerolog.ErrorLevel
-	case "fatal":
-		return zerolog.FatalLevel
-	case "panic":
-		return zerolog.PanicLevel
+		return slog.LevelError
 	default:
-		return zerolog.InfoLevel
+		return slog.LevelInfo
 	}
 }
+
+// WithAttrs は既定ロガーに属性を付与したロガーを返します。
+func WithAttrs(args ...any) *slog.Logger {
+	return slog.Default().With(args...)
+}
+
+// WithGroup は既定ロガーにグループを付与したロガーを返します。
+func WithGroup(name string) *slog.Logger {
+	return slog.Default().WithGroup(name)
+}
+
+// Default は既定ロガーを返します。
+func Default() *slog.Logger {
+	return slog.Default()
+}
+
+// FromContext は context に格納されたロガーを取得し、未設定なら既定ロガーを返します。
+func FromContext(ctx context.Context) *slog.Logger {
+	if logger, ok := ctx.Value(loggerKey{}).(*slog.Logger); ok && logger != nil {
+		return logger
+	}
+	return slog.Default()
+}
+
+// IntoContext はロガーを context に格納します。
+func IntoContext(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, logger)
+}
+
+type loggerKey struct{}

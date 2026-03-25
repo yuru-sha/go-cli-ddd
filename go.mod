@@ -1,6 +1,6 @@
 module github.com/yuru-sha/go-cli-ddd
 
-go 1.24.0
+go 1.25.8
 
 require (
 	dario.cat/mergo v1.0.1

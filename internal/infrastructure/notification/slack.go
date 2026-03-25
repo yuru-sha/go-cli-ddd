@@ -5,21 +5,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/model"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 )
 
-// SlackNotifier はSlackへの通知を担当します
+// SlackNotifier はSlackへの通知を担当します。
 type SlackNotifier struct {
 	config config.SlackConfig
 }
 
-// SlackMessage はSlack APIに送信するメッセージ構造体です
+// SlackMessage represents a Slack webhook payload.
 type SlackMessage struct {
 	Channel     string            `json:"channel,omitempty"`
 	Username    string            `json:"username,omitempty"`
@@ -28,7 +27,7 @@ type SlackMessage struct {
 	Attachments []SlackAttachment `json:"attachments,omitempty"`
 }
 
-// SlackAttachment はSlackメッセージの添付ファイル構造体です
+// SlackAttachment represents one Slack attachment block.
 type SlackAttachment struct {
 	Color  string `json:"color"`
 	Text   string `json:"text"`
@@ -36,37 +35,32 @@ type SlackAttachment struct {
 	Ts     int64  `json:"ts,omitempty"`
 }
 
-// NewSlackNotifier は新しいSlackNotifierを作成します
+// NewSlackNotifier creates a Slack notifier.
 func NewSlackNotifier(config config.SlackConfig) *SlackNotifier {
-	return &SlackNotifier{
-		config: config,
-	}
+	return &SlackNotifier{config: config}
 }
 
-// NotifyCommandResult はコマンド実行結果をSlackに通知します
+// NotifyCommandResult sends one command result to Slack.
 func (n *SlackNotifier) NotifyCommandResult(result *model.CommandResult) error {
 	if !n.config.Enabled {
-		log.Debug().Msg("Slack通知は無効化されています")
+		slog.Debug("Slack通知は無効化されています")
 		return nil
 	}
 
 	if n.config.WebhookURL == "" {
-		log.Warn().Msg("Slack WebhookURLが設定されていません")
-		return fmt.Errorf("Slack WebhookURLが設定されていません")
+		slog.Warn("Slack WebhookURLが設定されていません")
+		return fmt.Errorf("slack webhook URLが設定されていません")
 	}
 
-	// 成功/失敗に応じたアイコンとカラーを設定
 	statusEmoji := n.config.SuccessEmoji
-	statusColor := "good" // green
+	statusColor := "good"
 	if !result.IsSuccess() {
 		statusEmoji = n.config.FailureEmoji
-		statusColor = "danger" // red
+		statusColor = "danger"
 	}
 
-	// メッセージのヘッダーテキスト
 	headerText := fmt.Sprintf("%s %s: %s の処理が終了しました。", statusEmoji, n.config.Username, result.Process)
 
-	// 引数部分のテキスト
 	argsText := fmt.Sprintf("```\nProcess: %s\n", result.Process)
 	if len(result.AccountIDs) > 0 {
 		argsText += fmt.Sprintf("AccountIds: %s\n", strings.Join(result.AccountIDs, ", "))
@@ -79,7 +73,6 @@ func (n *SlackNotifier) NotifyCommandResult(result *model.CommandResult) error {
 	}
 	argsText += "```"
 
-	// 結果部分のテキスト
 	resultText := fmt.Sprintf("```\nStatus: %s\nStart: %s\nEnd: %s\nTime: %s\nTotal: %d\nSuccess: %d\nError: %d\nTotal Records: %d\n```",
 		result.Status,
 		model.FormatJST(result.StartTime),
@@ -91,7 +84,6 @@ func (n *SlackNotifier) NotifyCommandResult(result *model.CommandResult) error {
 		result.TotalRecords,
 	)
 
-	// Slackメッセージの構築
 	message := SlackMessage{
 		Channel:   n.config.Channel,
 		Username:  n.config.Username,
@@ -105,87 +97,71 @@ func (n *SlackNotifier) NotifyCommandResult(result *model.CommandResult) error {
 		},
 	}
 
-	// メッセージをJSONに変換
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
-		log.Error().Err(err).Msg("Slackメッセージのシリアライズに失敗しました")
+		slog.Error("Slackメッセージのシリアライズに失敗しました", "err", err)
 		return err
 	}
 
-	// Slackに通知を送信
-	err = n.sendWebhook(context.Background(), jsonMessage)
-	if err != nil {
-		log.Error().Err(err).Msg("Slack通知の送信に失敗しました")
+	if err := n.sendWebhook(context.Background(), jsonMessage); err != nil {
+		slog.Error("Slack通知の送信に失敗しました", "err", err)
 		return err
 	}
 
-	log.Info().Msg("Slack通知を送信しました")
+	slog.Info("Slack通知を送信しました")
 	return nil
 }
 
-// LogCommandResult はコマンド実行結果をログに出力します
+// LogCommandResult logs one command result using slog.
 func (n *SlackNotifier) LogCommandResult(result *model.CommandResult) {
-	// 成功/失敗に応じたアイコンを設定
 	statusEmoji := n.config.SuccessEmoji
+	logFn := slog.Info
 	if !result.IsSuccess() {
 		statusEmoji = n.config.FailureEmoji
+		logFn = slog.Error
 	}
 
-	// ログメッセージの構築
-	logEvent := log.Info()
-	if !result.IsSuccess() {
-		logEvent = log.Error()
+	args := []any{
+		"process", result.Process,
+		"status", result.Status,
+		"start_time", model.FormatJST(result.StartTime),
+		"end_time", model.FormatJST(result.EndTime),
+		"duration", result.FormatDuration(),
+		"total", result.TotalCount,
+		"success", result.SuccessCount,
+		"error", result.ErrorCount,
+		"total_records", result.TotalRecords,
 	}
-
-	// 基本情報をログに追加
-	logEvent.
-		Str("process", result.Process).
-		Str("status", result.Status).
-		Str("start_time", model.FormatJST(result.StartTime)).
-		Str("end_time", model.FormatJST(result.EndTime)).
-		Str("duration", result.FormatDuration()).
-		Int("total", result.TotalCount).
-		Int("success", result.SuccessCount).
-		Int("error", result.ErrorCount).
-		Int("total_records", result.TotalRecords)
-
-	// オプション情報をログに追加
 	if len(result.AccountIDs) > 0 {
-		logEvent.Strs("account_ids", result.AccountIDs)
+		args = append(args, "account_ids", result.AccountIDs)
 	}
 	if result.DateFrom != "" {
-		logEvent.Str("date_from", result.DateFrom)
+		args = append(args, "date_from", result.DateFrom)
 	}
 	if result.DateTo != "" {
-		logEvent.Str("date_to", result.DateTo)
+		args = append(args, "date_to", result.DateTo)
 	}
 
-	// ログメッセージを出力
-	logEvent.Msgf("%s コマンド実行結果: %s", statusEmoji, result.Process)
+	logFn(fmt.Sprintf("%s コマンド実行結果: %s", statusEmoji, result.Process), args...)
 }
 
-// sendWebhook はSlackのWebhookにJSONメッセージを送信します
 func (n *SlackNotifier) sendWebhook(ctx context.Context, jsonMessage []byte) error {
-	// リクエストを作成
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, n.config.WebhookURL, bytes.NewBuffer(jsonMessage))
 	if err != nil {
-		return fmt.Errorf("Slackリクエストの作成に失敗しました: %w", err)
+		return fmt.Errorf("slackリクエストの作成に失敗しました: %w", err)
 	}
 
-	// Content-Typeを設定
 	req.Header.Set("Content-Type", "application/json")
 
-	// リクエストを送信
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Slack通知の送信に失敗しました: %w", err)
+		return fmt.Errorf("slack通知の送信に失敗しました: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	// レスポンスのステータスコードを確認
 	if resp.StatusCode != http.StatusOK {
-		log.Error().Int("status_code", resp.StatusCode).Msg("Slack通知の送信に失敗しました")
-		return fmt.Errorf("Slack通知の送信に失敗しました: ステータスコード %d", resp.StatusCode)
+		slog.Error("Slack通知の送信に失敗しました", "status_code", resp.StatusCode)
+		return fmt.Errorf("slack通知の送信に失敗しました: ステータスコード %d", resp.StatusCode)
 	}
 
 	return nil

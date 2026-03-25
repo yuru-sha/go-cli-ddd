@@ -5,35 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
 )
 
-// APIClient は外部API1のクライアントです
+// APIClient は外部API1のクライアントです。
 type APIClient struct {
 	client         *http.Client
 	config         *config.Config
 	secretsManager secrets.Manager
 }
 
-// TokenCache はトークンをキャッシュするための構造体です
+// TokenCache はトークンをキャッシュするための構造体です。
 type TokenCache struct {
 	Token     string
 	ExpiresAt time.Time
 }
 
-// NewAPIClient は新しいAPIClientを作成します
+// NewAPIClient creates an External API 1 client.
 func NewAPIClient(cfg *config.Config, httpClient *http.Client, secretsManager secrets.Manager) *APIClient {
 	if httpClient == nil {
-		httpClient = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
 
 	return &APIClient{
@@ -43,48 +40,46 @@ func NewAPIClient(cfg *config.Config, httpClient *http.Client, secretsManager se
 	}
 }
 
-// GetAuthorizationHeader は認証ヘッダーを取得します
+// GetAuthorizationHeader resolves the authorization header for External API 1.
 func (c *APIClient) GetAuthorizationHeader(ctx context.Context) (string, string, error) {
-	// Secret Managerが有効で、トークンのSecretIDが設定されている場合
 	if c.config.AWS.Secrets.Enabled && c.config.ExternalAPI1.TokenSecretID != "" {
-		log.Info().Msg("Secret ManagerからAPIトークンを取得します")
+		slog.Info("Secret ManagerからAPIトークンを取得します")
 
-		// APIトークンを取得
 		tokenStr, err := c.secretsManager.GetSecret(ctx, c.config.ExternalAPI1.TokenSecretID)
 		if err != nil {
 			return "", "", fmt.Errorf("APIトークンの取得に失敗しました: %w", err)
 		}
 
-		// JSONをパース
 		var tokenSecret secrets.APITokenSecret
 		if err := json.Unmarshal([]byte(tokenStr), &tokenSecret); err != nil {
 			return "", "", fmt.Errorf("APIトークンのパースに失敗しました: %w", err)
 		}
 
-		// トークンの種類に応じて適切なヘッダーを返す
 		if tokenSecret.BearerToken != "" {
 			return "Authorization", fmt.Sprintf("Bearer %s", tokenSecret.BearerToken), nil
-		} else if tokenSecret.Token != "" {
+		}
+		if tokenSecret.Token != "" {
 			return "X-API-Token", tokenSecret.Token, nil
-		} else if tokenSecret.AccessKey != "" && tokenSecret.SecretKey != "" {
-			// アクセスキーとシークレットキーを使用した認証（必要に応じて実装）
+		}
+		if tokenSecret.AccessKey != "" && tokenSecret.SecretKey != "" {
 			return "X-API-Key", tokenSecret.AccessKey, nil
 		}
 	}
 
-	// デフォルトのトークン（開発用）
+	if c.config.ExternalAPI1.Token != "" {
+		return "X-API-Token", c.config.ExternalAPI1.Token, nil
+	}
+
 	return "X-API-Token", "dev-token-12345", nil
 }
 
-// CreateAuthenticatedRequest は認証情報を含むHTTPリクエストを作成します
-func (c *APIClient) CreateAuthenticatedRequest(ctx context.Context, method, url string, _ interface{}) (*http.Request, error) {
-	// リクエストを作成
+// CreateAuthenticatedRequest builds an authenticated request for External API 1.
+func (c *APIClient) CreateAuthenticatedRequest(ctx context.Context, method, url string, _ any) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("リクエストの作成に失敗しました: %w", err)
 	}
 
-	// 認証ヘッダーを取得して設定
 	headerName, headerValue, err := c.GetAuthorizationHeader(ctx)
 	if err != nil {
 		return nil, err
@@ -93,14 +88,12 @@ func (c *APIClient) CreateAuthenticatedRequest(ctx context.Context, method, url 
 	if headerName != "" && headerValue != "" {
 		req.Header.Set(headerName, headerValue)
 	}
-
-	// Content-Typeを設定
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
 }
 
-// Request は外部API1へのリクエストを実行します
+// Request executes a request against External API 1.
 func (c *APIClient) Request(ctx context.Context, method, path string, _ io.Reader) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", c.config.ExternalAPI1.BaseURL, path)
 
@@ -109,15 +102,13 @@ func (c *APIClient) Request(ctx context.Context, method, path string, _ io.Reade
 		return nil, err
 	}
 
-	// リクエストを実行
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("リクエストの実行に失敗しました: %w", err)
 	}
 
-	// エラーレスポンスの場合
 	if resp.StatusCode >= 400 {
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("APIエラー: %s - %s", resp.Status, string(body))
 	}
@@ -125,17 +116,17 @@ func (c *APIClient) Request(ctx context.Context, method, path string, _ io.Reade
 	return resp, nil
 }
 
-// GetData は外部API1からデータを取得するサンプルメソッドです
-func (c *APIClient) GetData(ctx context.Context, dataID string) (map[string]interface{}, error) {
+// GetData fetches one sample resource from External API 1.
+func (c *APIClient) GetData(ctx context.Context, dataID string) (map[string]any, error) {
 	path := fmt.Sprintf("/data/%s", dataID)
 
 	resp, err := c.Request(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("レスポンスのデコードに失敗しました: %w", err)
 	}
@@ -143,8 +134,8 @@ func (c *APIClient) GetData(ctx context.Context, dataID string) (map[string]inte
 	return result, nil
 }
 
-// PostData は外部API1にデータを送信するサンプルメソッドです
-func (c *APIClient) PostData(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error) {
+// PostData sends one sample resource to External API 1.
+func (c *APIClient) PostData(ctx context.Context, data map[string]any) (map[string]any, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("データのエンコードに失敗しました: %w", err)
@@ -154,9 +145,9 @@ func (c *APIClient) PostData(ctx context.Context, data map[string]interface{}) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("レスポンスのデコードに失敗しました: %w", err)
 	}

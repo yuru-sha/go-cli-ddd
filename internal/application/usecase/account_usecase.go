@@ -1,25 +1,25 @@
+// Package usecase implements application-level orchestration.
 package usecase
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/entity"
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/model"
 	"github.com/yuru-sha/go-cli-ddd/internal/domain/repository"
 )
 
-// AccountUseCase はアカウント関連のユースケースを実装します
+// AccountUseCase はアカウント関連のユースケースを実装します。
 type AccountUseCase struct {
 	accountRepo      repository.MySQLAccountRepository
 	accountAPIRepo   repository.ExternalAPI1AccountRepository
 	notificationRepo repository.NotificationRepository
 }
 
-// NewAccountUseCase は AccountUseCase の新しいインスタンスを作成します
+// NewAccountUseCase creates an AccountUseCase.
 func NewAccountUseCase(
 	accountRepo repository.MySQLAccountRepository,
 	accountAPIRepo repository.ExternalAPI1AccountRepository,
@@ -32,59 +32,52 @@ func NewAccountUseCase(
 	}
 }
 
-// SyncAccounts は外部APIからアカウント情報を取得し、データベースに同期します
+// SyncAccounts synchronizes all accounts from the external API.
 func (uc *AccountUseCase) SyncAccounts(ctx context.Context) error {
-	log.Info().Msg("アカウント情報の同期を開始します")
+	slog.Info("アカウント情報の同期を開始します")
 
-	// コマンド実行結果の記録を開始
 	result := model.NewCommandResult("account sync")
 
-	// 外部APIからアカウント情報を取得
 	accounts, err := uc.accountAPIRepo.FetchAccounts(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("アカウント情報の取得に失敗しました")
+		slog.Error("アカウント情報の取得に失敗しました", "err", err)
 		result.SetFailed()
 		result.Complete()
 		if notifyErr := uc.notificationRepo.NotifyCommandResult(result); notifyErr != nil {
-			log.Error().Err(notifyErr).Msg("通知の送信に失敗しました")
+			slog.Error("通知の送信に失敗しました", "err", notifyErr)
 		}
 		return err
 	}
 
-	log.Info().Int("count", len(accounts)).Msg("アカウント情報を取得しました")
+	slog.Info("アカウント情報を取得しました", "count", len(accounts))
 
-	// データベースに保存
 	if err := uc.accountRepo.SaveAll(ctx, accounts); err != nil {
-		log.Error().Err(err).Msg("アカウント情報の保存に失敗しました")
+		slog.Error("アカウント情報の保存に失敗しました", "err", err)
 		result.SetFailed()
 		result.Complete()
 		if notifyErr := uc.notificationRepo.NotifyCommandResult(result); notifyErr != nil {
-			log.Error().Err(notifyErr).Msg("通知の送信に失敗しました")
+			slog.Error("通知の送信に失敗しました", "err", notifyErr)
 		}
 		return err
 	}
 
-	// 処理結果を記録
 	result.AddCounts(len(accounts), 0, len(accounts))
 	result.Complete()
 
-	// 通知を送信
 	if err := uc.notificationRepo.NotifyCommandResult(result); err != nil {
-		log.Error().Err(err).Msg("通知の送信に失敗しました")
+		slog.Error("通知の送信に失敗しました", "err", err)
 	}
 
-	log.Info().Msg("アカウント情報の同期が完了しました")
+	slog.Info("アカウント情報の同期が完了しました")
 	return nil
 }
 
-// SyncAccountsByIDs は指定されたアカウントIDのアカウント情報を同期します
+// SyncAccountsByIDs synchronizes only the specified accounts.
 func (uc *AccountUseCase) SyncAccountsByIDs(ctx context.Context, accountIDs []int) error {
-	log.Info().Ints("account_ids", accountIDs).Msg("指定されたアカウント情報の同期を開始します")
+	slog.Info("指定されたアカウント情報の同期を開始します", "account_ids", accountIDs)
 
-	// コマンド実行結果の記録を開始
 	result := model.NewCommandResult("account sync --id")
 
-	// アカウントIDを文字列に変換
 	accountIDStrs := make([]string, len(accountIDs))
 	for i, id := range accountIDs {
 		accountIDStrs[i] = strconv.Itoa(id)
@@ -95,19 +88,16 @@ func (uc *AccountUseCase) SyncAccountsByIDs(ctx context.Context, accountIDs []in
 	errorCount := 0
 	totalRecords := 0
 
-	// 各アカウントIDについて処理
 	for _, accountID := range accountIDs {
-		// 外部APIからアカウント情報を取得
 		account, err := uc.accountAPIRepo.FetchAccountByID(ctx, accountID)
 		if err != nil {
-			log.Error().Err(err).Int("account_id", accountID).Msg("アカウント情報の取得に失敗しました")
+			slog.Error("アカウント情報の取得に失敗しました", "err", err, "account_id", accountID)
 			errorCount++
 			continue
 		}
 
-		// データベースに保存
 		if err := uc.accountRepo.Save(ctx, account); err != nil {
-			log.Error().Err(err).Int("account_id", accountID).Msg("アカウント情報の保存に失敗しました")
+			slog.Error("アカウント情報の保存に失敗しました", "err", err, "account_id", accountID)
 			errorCount++
 			continue
 		}
@@ -116,25 +106,22 @@ func (uc *AccountUseCase) SyncAccountsByIDs(ctx context.Context, accountIDs []in
 		totalRecords++
 	}
 
-	// 処理結果を記録
 	result.AddCounts(successCount, errorCount, totalRecords)
-
 	if errorCount > 0 && successCount == 0 {
 		result.SetFailed()
 	}
-
 	result.Complete()
 
-	// 通知を送信
 	if err := uc.notificationRepo.NotifyCommandResult(result); err != nil {
-		log.Error().Err(err).Msg("通知の送信に失敗しました")
+		slog.Error("通知の送信に失敗しました", "err", err)
 	}
 
-	log.Info().
-		Int("success", successCount).
-		Int("error", errorCount).
-		Int("total", len(accountIDs)).
-		Msg("指定されたアカウント情報の同期が完了しました")
+	slog.Info(
+		"指定されたアカウント情報の同期が完了しました",
+		"success", successCount,
+		"error", errorCount,
+		"total", len(accountIDs),
+	)
 
 	if errorCount > 0 && successCount == 0 {
 		return fmt.Errorf("すべてのアカウント情報の同期に失敗しました")
@@ -143,7 +130,7 @@ func (uc *AccountUseCase) SyncAccountsByIDs(ctx context.Context, accountIDs []in
 	return nil
 }
 
-// GetAllAccounts は全てのアカウント情報を取得します
+// GetAllAccounts fetches all stored accounts.
 func (uc *AccountUseCase) GetAllAccounts(ctx context.Context) ([]entity.Account, error) {
 	return uc.accountRepo.FindAll(ctx)
 }

@@ -41,7 +41,7 @@ func NewDynamoDBRepository(client Client, tableName string) repository.DynamoDBR
 }
 
 // GetItem は指定されたキーでアイテムを取得します
-func (r *RepositoryImpl) GetItem(ctx context.Context, partitionKey string, sortKey string) (map[string]interface{}, error) {
+func (r *RepositoryImpl) GetItem(ctx context.Context, partitionKey string, sortKey string) (map[string]any, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(r.tableName),
 		Key: map[string]types.AttributeValue{
@@ -59,7 +59,7 @@ func (r *RepositoryImpl) GetItem(ctx context.Context, partitionKey string, sortK
 		return nil, nil
 	}
 
-	item := make(map[string]interface{})
+	item := make(map[string]any)
 	err = attributevalue.UnmarshalMap(result.Item, &item)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal DynamoDB item: %w", err)
@@ -69,7 +69,7 @@ func (r *RepositoryImpl) GetItem(ctx context.Context, partitionKey string, sortK
 }
 
 // PutItem は新しいアイテムを作成または更新します
-func (r *RepositoryImpl) PutItem(ctx context.Context, item map[string]interface{}) error {
+func (r *RepositoryImpl) PutItem(ctx context.Context, item map[string]any) error {
 	av, err := attributevalue.MarshalMap(item)
 	if err != nil {
 		return fmt.Errorf("failed to marshal DynamoDB item: %w", err)
@@ -107,21 +107,12 @@ func (r *RepositoryImpl) DeleteItem(ctx context.Context, partitionKey string, so
 }
 
 // Query はパーティションキーと条件に基づいてアイテムを検索します
-func (r *RepositoryImpl) Query(ctx context.Context, partitionKey string, filterExpressionStr string) ([]map[string]interface{}, error) {
+func (r *RepositoryImpl) Query(ctx context.Context, partitionKey string, filterExpressionStr string) ([]map[string]any, error) {
 	// キー条件式を作成
 	keyCond := expression.Key("PK").Equal(expression.Value(partitionKey))
 
 	// フィルター式がある場合は追加
-	var builder expression.Builder
-	if filterExpressionStr != "" {
-		// 注意: 実際のアプリケーションでは、文字列からフィルター式を構築するのではなく
-		// expression.Nameとexpression.Valueを使用して安全に構築することをお勧めします
-		// ここでは簡略化のため、文字列をそのまま使用しています
-		builder = expression.NewBuilder().WithKeyCondition(keyCond)
-		// 実際のアプリケーションでは、ここでフィルター式を適切に構築する必要があります
-	} else {
-		builder = expression.NewBuilder().WithKeyCondition(keyCond)
-	}
+	builder := expression.NewBuilder().WithKeyCondition(keyCond)
 
 	expr, err := builder.Build()
 	if err != nil {
@@ -145,9 +136,9 @@ func (r *RepositoryImpl) Query(ctx context.Context, partitionKey string, filterE
 		return nil, fmt.Errorf("DynamoDB Query error: %w", err)
 	}
 
-	items := make([]map[string]interface{}, 0, len(result.Items))
+	items := make([]map[string]any, 0, len(result.Items))
 	for _, item := range result.Items {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		err = attributevalue.UnmarshalMap(item, &m)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal DynamoDB item: %w", err)
@@ -159,7 +150,7 @@ func (r *RepositoryImpl) Query(ctx context.Context, partitionKey string, filterE
 }
 
 // Scan はテーブル全体をスキャンして条件に一致するアイテムを検索します
-func (r *RepositoryImpl) Scan(ctx context.Context, filterExpressionStr string) ([]map[string]interface{}, error) {
+func (r *RepositoryImpl) Scan(ctx context.Context, filterExpressionStr string) ([]map[string]any, error) {
 	input := &dynamodb.ScanInput{
 		TableName: aws.String(r.tableName),
 	}
@@ -174,9 +165,9 @@ func (r *RepositoryImpl) Scan(ctx context.Context, filterExpressionStr string) (
 		return nil, fmt.Errorf("DynamoDB Scan error: %w", err)
 	}
 
-	items := make([]map[string]interface{}, 0, len(result.Items))
+	items := make([]map[string]any, 0, len(result.Items))
 	for _, item := range result.Items {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		err = attributevalue.UnmarshalMap(item, &m)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal DynamoDB item: %w", err)
@@ -188,7 +179,7 @@ func (r *RepositoryImpl) Scan(ctx context.Context, filterExpressionStr string) (
 }
 
 // BatchWrite は複数のアイテムを一括で書き込みます
-func (r *RepositoryImpl) BatchWrite(ctx context.Context, items []map[string]interface{}) error {
+func (r *RepositoryImpl) BatchWrite(ctx context.Context, items []map[string]any) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -197,10 +188,7 @@ func (r *RepositoryImpl) BatchWrite(ctx context.Context, items []map[string]inte
 	// 25項目ごとにバッチを分割する必要があります
 	const maxBatchSize = 25
 	for i := 0; i < len(items); i += maxBatchSize {
-		end := i + maxBatchSize
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+maxBatchSize, len(items))
 
 		batch := items[i:end]
 		writeRequests := make([]types.WriteRequest, len(batch))
@@ -234,7 +222,7 @@ func (r *RepositoryImpl) BatchWrite(ctx context.Context, items []map[string]inte
 }
 
 // TransactWrite はトランザクション内で複数の書き込み操作を実行します
-func (r *RepositoryImpl) TransactWrite(ctx context.Context, operations []map[string]interface{}) error {
+func (r *RepositoryImpl) TransactWrite(ctx context.Context, operations []map[string]any) error {
 	if len(operations) == 0 {
 		return nil
 	}

@@ -13,7 +13,7 @@ import (
 // MockClient は外部API2のモッククライアントです
 type MockClient struct {
 	// モックデータを保持するマップ
-	mockData map[string]interface{}
+	mockData map[string]any
 	// 呼び出されたメソッドを記録
 	calls []string
 	// モックトークンソース
@@ -23,13 +23,13 @@ type MockClient struct {
 // NewMockClient は新しいMockClientインスタンスを作成します
 func NewMockClient() *MockClient {
 	return &MockClient{
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 		calls:    []string{},
 	}
 }
 
 // SetMockData はモックデータを設定します
-func (m *MockClient) SetMockData(key string, data interface{}) {
+func (m *MockClient) SetMockData(key string, data any) {
 	m.mockData[key] = data
 }
 
@@ -69,19 +69,19 @@ func (m *MockClient) GetAuthenticatedClient(_ context.Context) (*http.Client, er
 }
 
 // GetCampaigns はモックキャンペーン情報を返します
-func (m *MockClient) GetCampaigns(_ context.Context, customerID string) (map[string]interface{}, error) {
+func (m *MockClient) GetCampaigns(_ context.Context, customerID string) (map[string]any, error) {
 	m.recordCall(fmt.Sprintf("GetCampaigns:%s", customerID))
 
 	// モックデータが設定されている場合はそれを返す
 	if data, ok := m.mockData[fmt.Sprintf("campaigns:%s", customerID)]; ok {
-		if result, ok := data.(map[string]interface{}); ok {
+		if result, ok := data.(map[string]any); ok {
 			return result, nil
 		}
 	}
 
 	// デフォルトのモックデータを返す
-	return map[string]interface{}{
-		"campaigns": []map[string]interface{}{
+	return map[string]any{
+		"campaigns": []map[string]any{
 			{
 				"id":        "1234567890",
 				"name":      "Mock Campaign 1",
@@ -106,7 +106,7 @@ func (m *MockClient) GetCampaigns(_ context.Context, customerID string) (map[str
 }
 
 // CreateCampaign はモックキャンペーンを作成します
-func (m *MockClient) CreateCampaign(_ context.Context, customerID string, campaign map[string]interface{}) (map[string]interface{}, error) {
+func (m *MockClient) CreateCampaign(_ context.Context, customerID string, campaign map[string]any) (map[string]any, error) {
 	m.recordCall(fmt.Sprintf("CreateCampaign:%s", customerID))
 
 	// 入力データをJSON文字列に変換（デバッグ用）
@@ -119,7 +119,7 @@ func (m *MockClient) CreateCampaign(_ context.Context, customerID string, campai
 	}
 
 	// 成功レスポンスを返す
-	return map[string]interface{}{
+	return map[string]any{
 		"id":           "campaign-12345",
 		"name":         campaign["name"],
 		"status":       "ENABLED",

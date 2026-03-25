@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-// NewDynamoDBClient はAWS SDK for Go v2を使用してDynamoDBクライアントを作成します
+// NewDynamoDBClient creates a DynamoDB client using AWS SDK for Go v2.
 func NewDynamoDBClient(ctx context.Context, region string) (Client, error) {
 	// AWS SDKの設定をロード
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
@@ -21,7 +21,7 @@ func NewDynamoDBClient(ctx context.Context, region string) (Client, error) {
 	return client, nil
 }
 
-// NewLocalDynamoDBClient はローカル開発用のDynamoDBクライアントを作成します
+// NewLocalDynamoDBClient creates a DynamoDB client for local development.
 func NewLocalDynamoDBClient(ctx context.Context, endpoint string) (Client, error) {
 	// AWS SDKの設定をロード（リージョンはダミー値でOK）
 	cfg, err := config.LoadDefaultConfig(ctx,

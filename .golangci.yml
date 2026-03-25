@@ -1,28 +1,30 @@
+version: "2"
+
 run:
   concurrency: 4
   timeout: 5m
   modules-download-mode: readonly
-  go: '1.24'
-  # テストファイルは基本的なチェックのみ
+  go: "1.25"
   tests: false
 
 linters:
   enable:
-    - bodyclose      # HTTPレスポンスボディのクローズチェック
-    - errcheck      # エラーハンドリングチェック
-    - goconst       # 定数化できる文字列の検出
-    - gocritic      # コーディングスタイルチェック
-    - gofmt         # コードフォーマット
-    - goimports     # import文の整理
-    - gosec         # セキュリティチェック
-    - govet         # 一般的なコードの問題検出
-    - ineffassign   # 無効な代入の検出
-    - staticcheck   # 静的解析
-    - typecheck     # 型チェック
-    - unused        # 未使用コードの検出
-    # アプリケーション向けの追加リンター
-    - misspell      # スペルミスチェック
-    - prealloc      # スライスの事前割り当て最適化
+    - bodyclose
+    - errcheck
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - modernize
+    - revive
+    - staticcheck
+    - unused
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 linters-settings:
   staticcheck:
@@ -32,33 +34,35 @@ linters-settings:
       - diagnostic
       - style
       - performance
-    settings:
-      rangeValCopy:
-        sizeThreshold: 512  # アプリケーションではより寛容な値に
+      - experimental
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+      - name: unexported-return
+        severity: warning
+        disabled: false
+      - name: var-declaration
+        severity: warning
+        disabled: false
   gosec:
     excludes:
-      - G104  # Audit errors not checked
-      - G114  # Use of net/http serve function that has no support for setting timeouts
+      - G104
+      - G114
 
 issues:
   max-issues-per-linter: 50
   max-same-issues: 10
-  # 自動生成されたファイルは除外
   exclude-files:
     - ".*\\.generated\\.go$"
-    - ".*\\.pb\\.go$"      # Protocol Bufferの生成ファイル
-    - ".*\\.mock\\.go$"    # モックファイル
+    - ".*\\.pb\\.go$"
+    - ".*\\.mock\\.go$"
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
         - gosec
-    # ハンドラー関数の未使用パラメータを許可
-    - text: "unused parameter"
-      linters:
-        - unparam
-      source: "^func.*Handler"
-  # デフォルトの除外ルールを使用
   exclude-use-default: true
   exclude:
-    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"
+    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.(Remove|RemoveAll)|.*printf?|os\\.(Un)?Setenv). is not checked"

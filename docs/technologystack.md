@@ -1,14 +1,14 @@
 # 技術スタック
 
 ## コア技術
-- Go: ^1.24.0
+- Go: ^1.25.8
 - DDD（ドメイン駆動設計）
 - クリーンアーキテクチャ
-- **AIモデル: claude-3-7-sonnet-20250219 (Anthropic Messages API 2023-06-01) ← バージョン変更禁止**
 
-## CLIフレームワーク
-- Cobra: ^1.9.1
-- Viper: ^1.19.0（設定管理）
+## CLI / 設定
+- flag（標準ライブラリ）
+- os.Getenv（環境変数）
+- Viper: ^1.19.0（YAML 設定読み込み）
 
 ## データベース
 - SQLite: ^1.5.7（GORM SQLiteドライバー）
@@ -19,7 +19,7 @@
 - Google Wire: ^0.6.0
 
 ## ロギング
-- zerolog: ^1.33.0
+- log/slog（標準ライブラリ）
 
 ## 並列処理・非同期処理
 - golang.org/x/sync/errgroup: ^0.12.0
@@ -28,18 +28,15 @@
 - net/http（HTTPクライアント）
 
 ## 開発ツール
-- golangci-lint（リントツール）
+- golangci-lint v2（`.golangci.yml` に一本化）
 - Go Modules（依存関係管理）
 - Mermaid（テキストベースのダイアグラム作成ツール）
 - GitHub Actions（CI/CDプラットフォーム）
 
----
-
-# API バージョン管理
-## 重要な制約事項
-- 外部サービスとの連携は `internal/infrastructure/api/` ディレクトリ内で実装
-- これらのファイルは変更禁止（変更が必要な場合は承認が必要）：
-  - config.go  - 環境設定の一元管理
-
-## 実装規則
-- 環境変数の利用は config.go 経由のみ許可
+## 設定方針
+- `prd` を基底設定として使用
+- `dev` は `prd` の上書き
+- `local` は `prd` の上書き後に `.env` を読み込む
+- `--env` 未指定時は `ENV`、次に `.env`、最後に `prd` で決定
+- OS 環境変数は全環境で YAML を上書き可能
+- `SECRETS_PROVIDER=env|aws` で secrets の取得元を切り替える

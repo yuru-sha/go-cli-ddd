@@ -1,38 +1,78 @@
-linters:
+version: "2"
+
+run:
+  concurrency: 4
+  timeout: 5m
+  modules-download-mode: readonly
+  go: "1.25"
+  tests: false
+
+formatters:
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    - gosec
     - gofmt
     - goimports
-    - misspell
-    - revive
-    - bodyclose
-    - noctx
-    - prealloc
+  
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: github.com/yuru-sha/go-cli-ddd
 
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/yuru-sha/go-cli-ddd
-  gosec:
-    excludes:
-      - G104 # Unhandled errors
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - revive
+    - modernize
+    - gosec
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+
+  settings:
+    gosec:
+      excludes:
+        - G101
+        - G104
+        - G106
+        - G115
+        - G301
+        - G302
+        - G304
+        - G306
+    staticcheck:
+      checks: 
+        - all
+        - "-ST1000"
+        - SA1019
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: var-naming
+          disabled: false
+        - name: package-comments
+          disabled: true
 
 issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-files:
+    - ".*\\.generated\\.go$"
+    - ".*\\.pb\\.go$"
+    - ".*\\.mock\\.go$"
   exclude-rules:
     - path: _test\.go
       linters:
+        - errcheck
         - gosec
-  exclude-dirs:
-    - vendor
+    - path: wire_gen\.go
+      linters:
+        - staticcheck
 
-run:
-  timeout: 5m
-  go: '1.24'
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

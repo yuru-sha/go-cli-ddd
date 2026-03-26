@@ -1,12 +1,13 @@
+// Command gen generates GORM models and query code.
 package main
 
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gen"
 	"gorm.io/gorm"
@@ -14,9 +15,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// メインエントリーポイント
 func main() {
-	// コマンドライン引数の解析
 	var host string
 	var port int
 	var user string
@@ -36,42 +35,37 @@ func main() {
 	flag.StringVar(&tables, "tables", "", "生成対象のテーブル名（カンマ区切り、空の場合は全テーブル）")
 	flag.Parse()
 
-	// データベース名は必須
 	if dbName == "" {
-		log.Error().Msg("データベース名を指定してください（-dbname）")
+		slog.Error("データベース名を指定してください（-dbname）")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	log.Info().Msg("GORM genによるモデル生成を開始します")
-	log.Info().Str("database", dbName).Str("host", host).Int("port", port).Msg("対象データベース")
+	slog.Info("GORM genによるモデル生成を開始します")
+	slog.Info("対象データベース", "database", dbName, "host", host, "port", port)
 
-	// データベース接続
 	db, err := connectDatabase(host, port, user, password, dbName)
 	if err != nil {
-		log.Error().Err(err).Msg("データベース接続に失敗しました")
+		slog.Error("データベース接続に失敗しました", "err", err)
 		os.Exit(1)
 	}
 
-	// モデル生成
 	if err := generateModels(db, outPath, modelPath, tables); err != nil {
-		log.Error().Err(err).Msg("モデル生成に失敗しました")
+		slog.Error("モデル生成に失敗しました", "err", err)
 		os.Exit(1)
 	}
 
-	log.Info().Msg("モデル生成が完了しました")
+	slog.Info("モデル生成が完了しました")
 }
 
-// connectDatabase はデータベースに接続します
 func connectDatabase(host string, port int, user, password, dbName string) (*gorm.DB, error) {
-	// MySQL接続設定
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		user, password, host, port, dbName)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true, // テーブル名を単数形にする
+			SingularTable: true,
 		},
 	})
 	if err != nil {
@@ -81,41 +75,34 @@ func connectDatabase(host string, port int, user, password, dbName string) (*gor
 	return db, nil
 }
 
-// generateModels はGORM genを使用してモデルを生成します
 func generateModels(db *gorm.DB, outPath, modelPath, tableList string) error {
-	// ジェネレーターの設定
 	g := gen.NewGenerator(gen.Config{
 		OutPath:           outPath,
 		ModelPkgPath:      modelPath,
 		Mode:              gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface,
-		FieldNullable:     true, // NULL可能なフィールドにポインタを使用
-		FieldCoverable:    true, // フィールドの上書きを許可
-		FieldSignable:     true, // 符号付き整数を使用
-		FieldWithIndexTag: true, // インデックスタグを生成
-		FieldWithTypeTag:  true, // タイプタグを生成
+		FieldNullable:     true,
+		FieldCoverable:    true,
+		FieldSignable:     true,
+		FieldWithIndexTag: true,
+		FieldWithTypeTag:  true,
 	})
 
-	// データベース接続の設定
 	g.UseDB(db)
 
-	// 対象テーブルの取得
 	var tables []string
 	if tableList != "" {
 		tables = strings.Split(tableList, ",")
-		log.Info().Strs("tables", tables).Msg("指定されたテーブルのみを生成します")
+		slog.Info("指定されたテーブルのみを生成します", "tables", tables)
 	} else {
-		// データベースから全テーブルを取得
 		var tableNames []string
 		if err := db.Raw("SHOW TABLES").Scan(&tableNames).Error; err != nil {
 			return fmt.Errorf("テーブル一覧の取得に失敗しました: %w", err)
 		}
 		tables = tableNames
-		log.Info().Strs("tables", tables).Msg("データベース内の全テーブルを生成します")
+		slog.Info("データベース内の全テーブルを生成します", "tables", tables)
 	}
 
-	// 各テーブルに対してモデルを生成
 	for _, tableName := range tables {
-		// 日時型フィールドの特別処理
 		timeFields := []string{"created_at", "updated_at", "start_date", "end_date", "deleted_at"}
 		fieldOpts := []gen.ModelOpt{}
 
@@ -126,7 +113,6 @@ func generateModels(db *gorm.DB, outPath, modelPath, tableList string) error {
 		g.GenerateModel(tableName, fieldOpts...)
 	}
 
-	// コードの生成
 	g.Execute()
 
 	return nil

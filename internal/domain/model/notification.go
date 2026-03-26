@@ -1,3 +1,4 @@
+// Package model defines domain models shared across layers.
 package model
 
 import (

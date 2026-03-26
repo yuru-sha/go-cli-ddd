@@ -96,7 +96,7 @@ func TestClientConfig(t *testing.T) {
 		AWS: config.AWSConfig{
 			Region: "ap-northeast-1",
 			Secrets: config.SecretsConfig{
-				Enabled: true,
+				Provider: "aws",
 			},
 		},
 	}

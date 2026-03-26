@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 )
 
-// NewHTTPClient は設定に基づいてHTTPクライアントを作成します
+// NewHTTPClient creates an HTTP client from configuration.
 func NewHTTPClient(cfg *config.HTTPConfig) *http.Client {
 	return &http.Client{
 		Timeout: time.Duration(cfg.Timeout) * time.Second,
@@ -22,12 +23,12 @@ func NewHTTPClient(cfg *config.HTTPConfig) *http.Client {
 	}
 }
 
-// NewRateLimiter はレート制限を行うリミッターを作成します
+// NewRateLimiter creates a rate limiter from configuration.
 func NewRateLimiter(cfg *config.RateLimitConfig) *rate.Limiter {
 	return rate.NewLimiter(rate.Limit(cfg.QPS), cfg.Burst)
 }
 
-// NewBackOff はリトライ用のバックオフポリシーを作成します
+// NewBackOff creates a retry backoff policy.
 func NewBackOff(maxRetries int) backoff.BackOff {
 	exponentialBackOff := backoff.NewExponentialBackOff()
 	exponentialBackOff.InitialInterval = 100 * time.Millisecond
@@ -55,4 +56,15 @@ func NewBackOff(maxRetries int) backoff.BackOff {
 	}
 
 	return backoff.WithMaxRetries(exponentialBackOff, maxRetriesUint64)
+}
+
+// CloseResponseBody closes an HTTP response body and logs close failures.
+func CloseResponseBody(resp *http.Response, attrs ...any) {
+	if resp == nil || resp.Body == nil {
+		return
+	}
+	if err := resp.Body.Close(); err != nil {
+		logAttrs := append([]any{"err", err}, attrs...)
+		slog.Warn("response body のクローズに失敗しました", logAttrs...)
+	}
 }

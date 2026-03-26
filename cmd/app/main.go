@@ -1,42 +1,35 @@
+// Command app starts the main CLI application.
 package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/wire"
+	"github.com/yuru-sha/go-cli-ddd/internal/interfaces/cli"
 )
 
 func main() {
-	// 設定ファイルのパスと環境を取得
-	configPath := "configs/config.yaml"
-	env := "local"
-
-	// コマンドライン引数から環境を取得
-	for i, arg := range os.Args {
-		if arg == "--env" && i+1 < len(os.Args) {
-			env = os.Args[i+1]
-		}
+	opts, _, _, err := cli.ParseRootArgs(os.Args[1:], "configs/config.yaml")
+	if err != nil {
+		fmt.Printf("起動引数の解析に失敗しました: %v\n", err)
+		os.Exit(1)
 	}
 
-	// アプリケーションの初期化パラメータを作成
 	params := wire.AppParams{
-		ConfigPath: configPath,
-		Env:        env,
+		ConfigPath: opts.ConfigPath,
+		Env:        opts.Env,
 	}
 
-	// アプリケーションの初期化
 	rootCmd, err := wire.InitializeApp(params)
 	if err != nil {
 		fmt.Printf("アプリケーションの初期化に失敗しました: %v\n", err)
 		os.Exit(1)
 	}
 
-	// コマンドの実行
-	if err := rootCmd.Execute(); err != nil {
-		log.Error().Err(err).Msg("コマンドの実行に失敗しました")
+	if err := rootCmd.Execute(os.Args[1:]); err != nil {
+		slog.Error("コマンドの実行に失敗しました", "err", err)
 		os.Exit(1)
 	}
 }

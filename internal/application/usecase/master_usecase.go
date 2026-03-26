@@ -2,17 +2,16 @@ package usecase
 
 import (
 	"context"
-
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
-// MasterUseCase はマスター同期関連のユースケースを実装します
+// MasterUseCase はマスター同期関連のユースケースを実装します。
 type MasterUseCase struct {
 	accountUseCase  *AccountUseCase
 	campaignUseCase *CampaignUseCase
 }
 
-// NewMasterUseCase は MasterUseCase の新しいインスタンスを作成します
+// NewMasterUseCase creates a MasterUseCase.
 func NewMasterUseCase(
 	accountUseCase *AccountUseCase,
 	campaignUseCase *CampaignUseCase,
@@ -23,22 +22,20 @@ func NewMasterUseCase(
 	}
 }
 
-// SyncAll はアカウント情報とキャンペーン情報を順番に同期します
+// SyncAll synchronizes all master data in sequence.
 func (uc *MasterUseCase) SyncAll(ctx context.Context) error {
-	log.Info().Msg("マスター同期を開始します")
+	slog.Info("マスター同期を開始します")
 
-	// アカウント情報の同期
 	if err := uc.accountUseCase.SyncAccounts(ctx); err != nil {
-		log.Error().Err(err).Msg("アカウント情報の同期に失敗しました")
+		slog.Error("アカウント情報の同期に失敗しました", "err", err)
 		return err
 	}
 
-	// キャンペーン情報の同期
 	if err := uc.campaignUseCase.SyncCampaigns(ctx); err != nil {
-		log.Error().Err(err).Msg("キャンペーン情報の同期に失敗しました")
+		slog.Error("キャンペーン情報の同期に失敗しました", "err", err)
 		return err
 	}
 
-	log.Info().Msg("マスター同期が完了しました")
+	slog.Info("マスター同期が完了しました")
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 // MockClient は外部API1のモッククライアントです
 type MockClient struct {
 	// モックデータを保持するマップ
-	mockData map[string]interface{}
+	mockData map[string]any
 	// 呼び出されたメソッドを記録
 	calls []string
 }
@@ -19,13 +19,13 @@ type MockClient struct {
 // NewMockClient は新しいMockClientインスタンスを作成します
 func NewMockClient() *MockClient {
 	return &MockClient{
-		mockData: make(map[string]interface{}),
+		mockData: make(map[string]any),
 		calls:    []string{},
 	}
 }
 
 // SetMockData はモックデータを設定します
-func (m *MockClient) SetMockData(key string, data interface{}) {
+func (m *MockClient) SetMockData(key string, data any) {
 	m.mockData[key] = data
 }
 
@@ -46,18 +46,18 @@ func (m *MockClient) GetToken(_ context.Context) (string, error) {
 }
 
 // GetData はモックデータを返します
-func (m *MockClient) GetData(_ context.Context, dataID string) (map[string]interface{}, error) {
+func (m *MockClient) GetData(_ context.Context, dataID string) (map[string]any, error) {
 	m.recordCall(fmt.Sprintf("GetData:%s", dataID))
 
 	// モックデータが設定されている場合はそれを返す
 	if data, ok := m.mockData[fmt.Sprintf("data:%s", dataID)]; ok {
-		if result, ok := data.(map[string]interface{}); ok {
+		if result, ok := data.(map[string]any); ok {
 			return result, nil
 		}
 	}
 
 	// デフォルトのモックデータを返す
-	return map[string]interface{}{
+	return map[string]any{
 		"id":         dataID,
 		"name":       fmt.Sprintf("Mock Data %s", dataID),
 		"type":       "mock",
@@ -66,7 +66,7 @@ func (m *MockClient) GetData(_ context.Context, dataID string) (map[string]inter
 }
 
 // PostData はモックデータを受け取り、処理したように見せかけます
-func (m *MockClient) PostData(_ context.Context, data map[string]interface{}) (map[string]interface{}, error) {
+func (m *MockClient) PostData(_ context.Context, data map[string]any) (map[string]any, error) {
 	m.recordCall("PostData")
 
 	// 入力データをJSON文字列に変換（デバッグ用）
@@ -79,7 +79,7 @@ func (m *MockClient) PostData(_ context.Context, data map[string]interface{}) (m
 	}
 
 	// 成功レスポンスを返す
-	return map[string]interface{}{
+	return map[string]any{
 		"id":        "mock-id-12345",
 		"name":      data["name"],
 		"status":    "created",
@@ -89,7 +89,7 @@ func (m *MockClient) PostData(_ context.Context, data map[string]interface{}) (m
 }
 
 // Request はモックリクエストを実行します（実際には何もしません）
-func (m *MockClient) Request(ctx context.Context, method, path string, body io.Reader) (interface{}, error) {
+func (m *MockClient) Request(ctx context.Context, method, path string, body io.Reader) (any, error) {
 	m.recordCall(fmt.Sprintf("Request:%s:%s", method, path))
 
 	// リクエストボディを読み込む（あれば）
@@ -111,7 +111,7 @@ func (m *MockClient) Request(ctx context.Context, method, path string, body io.R
 		return m.GetData(ctx, dataID)
 	} else if path == "/data" && method == "POST" {
 		// POSTリクエストの場合
-		var data map[string]interface{}
+		var data map[string]any
 		if err := json.Unmarshal([]byte(bodyStr), &data); err != nil {
 			return nil, fmt.Errorf("リクエストボディのパースに失敗しました: %w", err)
 		}
@@ -120,7 +120,7 @@ func (m *MockClient) Request(ctx context.Context, method, path string, body io.R
 	}
 
 	// 未対応のパスの場合
-	return map[string]interface{}{
+	return map[string]any{
 		"status": "mock_response",
 		"path":   path,
 		"method": method,

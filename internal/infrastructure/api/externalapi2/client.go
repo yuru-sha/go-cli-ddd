@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
 )
 
-// Client は外部API2（例：Google Ads API）のクライアントです
+// Client は外部API2（例：Google Ads API）のクライアントです。
 type Client struct {
 	httpClient     *http.Client
 	config         *config.Config
@@ -25,56 +25,46 @@ type Client struct {
 	tokenSource    oauth2.TokenSource
 }
 
-// OAuth2Secret はOAuth2認証情報を表します
+// OAuth2Secret stores OAuth2 credentials loaded from Secret Manager.
 type OAuth2Secret struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	RefreshToken string `json:"refresh_token"`
 }
 
-// NewClient は新しいClient インスタンスを作成します
+// NewClient creates an External API 2 client.
 func NewClient(cfg *config.Config, httpClient *http.Client, secretsManager secrets.Manager) *Client {
 	if httpClient == nil {
-		httpClient = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
 
-	// OAuth2の設定
 	oauthConfig := &oauth2.Config{
 		ClientID:     cfg.ExternalAPI2.ClientID,
 		ClientSecret: cfg.ExternalAPI2.ClientSecret,
-		Endpoint: oauth2.Endpoint{
+		Endpoint: oauth2.Endpoint{ //nolint:gosec // Fixed Google OAuth endpoints are public URLs, not credentials.
 			AuthURL:  "https://accounts.google.com/o/oauth2/auth",
 			TokenURL: "https://oauth2.googleapis.com/token",
 		},
-		Scopes: []string{
-			"https://www.googleapis.com/auth/adwords",
-		},
+		Scopes: []string{"https://www.googleapis.com/auth/adwords"},
 	}
 
-	client := &Client{
+	return &Client{
 		httpClient:     httpClient,
 		config:         cfg,
 		secretsManager: secretsManager,
 		oauthConfig:    oauthConfig,
 	}
-
-	return client
 }
 
-// GetTokenSource はOAuth2トークンソースを取得します
+// GetTokenSource resolves the OAuth2 token source for External API 2.
 func (c *Client) GetTokenSource(ctx context.Context) (oauth2.TokenSource, error) {
-	// すでにトークンソースが初期化されている場合はそれを返す
 	if c.tokenSource != nil {
 		return c.tokenSource, nil
 	}
 
 	var refreshToken string
-
-	// Secret Managerからトークンを取得
-	if c.config.AWS.Secrets.Enabled && c.config.ExternalAPI2.OAuth2SecretID != "" {
-		log.Info().Msg("Secret ManagerからOAuth2認証情報を取得します")
+	if c.config.UseAWSSecretsManager() && c.config.ExternalAPI2.OAuth2SecretID != "" {
+		slog.Info("Secret ManagerからOAuth2認証情報を取得します")
 
 		secretValue, err := c.secretsManager.GetSecret(ctx, c.config.ExternalAPI2.OAuth2SecretID)
 		if err != nil {
@@ -86,7 +76,6 @@ func (c *Client) GetTokenSource(ctx context.Context) (oauth2.TokenSource, error)
 			return nil, fmt.Errorf("OAuth2認証情報の解析に失敗しました: %w", err)
 		}
 
-		// Secret Managerから取得した値で設定を上書き
 		if oauthSecret.ClientID != "" {
 			c.oauthConfig.ClientID = oauthSecret.ClientID
 		}
@@ -97,7 +86,6 @@ func (c *Client) GetTokenSource(ctx context.Context) (oauth2.TokenSource, error)
 			refreshToken = oauthSecret.RefreshToken
 		}
 	} else {
-		// 設定ファイルから取得
 		refreshToken = c.config.ExternalAPI2.RefreshToken
 	}
 
@@ -105,32 +93,24 @@ func (c *Client) GetTokenSource(ctx context.Context) (oauth2.TokenSource, error)
 		return nil, fmt.Errorf("リフレッシュトークンが設定されていません")
 	}
 
-	// リフレッシュトークンからトークンを作成
-	token := &oauth2.Token{
-		RefreshToken: refreshToken,
-	}
-
-	// トークンソースを作成して保存
+	token := &oauth2.Token{RefreshToken: refreshToken}
 	c.tokenSource = c.oauthConfig.TokenSource(ctx, token)
 	return c.tokenSource, nil
 }
 
-// GetAuthenticatedClient は認証済みのHTTPクライアントを取得します
+// GetAuthenticatedClient returns an authenticated HTTP client for External API 2.
 func (c *Client) GetAuthenticatedClient(ctx context.Context) (*http.Client, error) {
 	tokenSource, err := c.GetTokenSource(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	// OAuth2認証済みのHTTPクライアントを作成
 	return oauth2.NewClient(ctx, tokenSource), nil
 }
 
-// Request は外部API2へのリクエストを実行します
+// Request executes a request against External API 2.
 func (c *Client) Request(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", c.config.ExternalAPI2.BaseURL, path)
 
-	// 認証済みのHTTPクライアントを取得
 	client, err := c.GetAuthenticatedClient(ctx)
 	if err != nil {
 		return nil, err
@@ -141,25 +121,21 @@ func (c *Client) Request(ctx context.Context, method, path string, body io.Reade
 		return nil, fmt.Errorf("リクエストの作成に失敗しました: %w", err)
 	}
 
-	// Google Ads APIの場合は追加のヘッダーが必要
 	if c.config.ExternalAPI2.DeveloperToken != "" {
 		req.Header.Set("developer-token", c.config.ExternalAPI2.DeveloperToken)
 	}
 	if c.config.ExternalAPI2.LoginCustomerID != "" {
 		req.Header.Set("login-customer-id", c.config.ExternalAPI2.LoginCustomerID)
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
-	// リクエストを実行
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("リクエストの実行に失敗しました: %w", err)
 	}
 
-	// エラーレスポンスの場合
 	if resp.StatusCode >= 400 {
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("APIエラー: %s - %s", resp.Status, string(body))
 	}
@@ -167,17 +143,17 @@ func (c *Client) Request(ctx context.Context, method, path string, body io.Reade
 	return resp, nil
 }
 
-// GetCampaigns はキャンペーン情報を取得するサンプルメソッドです
-func (c *Client) GetCampaigns(ctx context.Context, customerID string) (map[string]interface{}, error) {
+// GetCampaigns fetches campaigns for one customer from External API 2.
+func (c *Client) GetCampaigns(ctx context.Context, customerID string) (map[string]any, error) {
 	path := fmt.Sprintf("/customers/%s/campaigns", customerID)
 
 	resp, err := c.Request(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("レスポンスのデコードに失敗しました: %w", err)
 	}
@@ -185,8 +161,8 @@ func (c *Client) GetCampaigns(ctx context.Context, customerID string) (map[strin
 	return result, nil
 }
 
-// CreateCampaign はキャンペーンを作成するサンプルメソッドです
-func (c *Client) CreateCampaign(ctx context.Context, customerID string, campaign map[string]interface{}) (map[string]interface{}, error) {
+// CreateCampaign creates a campaign for one customer in External API 2.
+func (c *Client) CreateCampaign(ctx context.Context, customerID string, campaign map[string]any) (map[string]any, error) {
 	path := fmt.Sprintf("/customers/%s/campaigns", customerID)
 
 	jsonData, err := json.Marshal(campaign)
@@ -198,9 +174,9 @@ func (c *Client) CreateCampaign(ctx context.Context, customerID string, campaign
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("レスポンスのデコードに失敗しました: %w", err)
 	}

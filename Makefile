@@ -1,4 +1,6 @@
-.PHONY: build clean run wire test lint gen-model init-db install-tools test-coverage test-race test-integration ci
+.PHONY: build clean run wire test lint gen-model init-db install-tools test-coverage test-race test-integration ci watch-go
+
+GO_BIN := $(or $(shell go env GOBIN 2>/dev/null),$(shell go env GOPATH 2>/dev/null)/bin,$(HOME)/go/bin)
 
 # デフォルトターゲット
 all: wire build
@@ -53,11 +55,16 @@ test-integration:
 lint:
 	golangci-lint run
 
+# Goファイルの変更監視
+watch-go:
+	bash scripts/watch-go.sh
+
 # ツールのインストール
 install-tools:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.5
+	mkdir -p $(GO_BIN)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_BIN) v2.11.4
 	golangci-lint --version
-	go install github.com/google/wire/cmd/wire@latest
+	go install github.com/google/wire/cmd/wire@v0.7.0
 
 # CI用のターゲット
 ci: lint test-race test-coverage build

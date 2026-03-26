@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.41.1
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.2
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/google/wire v0.6.0
+	github.com/google/wire v0.7.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0

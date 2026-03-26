@@ -64,7 +64,7 @@ install-tools:
 	mkdir -p $(GO_BIN)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_BIN) v2.11.4
 	golangci-lint --version
-	go install github.com/google/wire/cmd/wire@latest
+	go install github.com/google/wire/cmd/wire@v0.7.0
 
 # CI用のターゲット
 ci: lint test-race test-coverage build

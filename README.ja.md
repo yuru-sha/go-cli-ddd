@@ -1,12 +1,13 @@
 # Go CLI DDD
 ![Go CI](https://github.com/yuru-sha/go-cli-ddd/workflows/Go%20CI/badge.svg)
 
-Go `1.25.8`、DDD、クリーンアーキテクチャ、Cobra、GORM、Google Wire を使った CLI アプリケーションのサンプルです。
+Go `1.25.8`、DDD、クリーンアーキテクチャ、`flag`、GORM、Google Wire を使った CLI アプリケーションのサンプルです。
 
 ## 技術スタック
 
 - Go `1.25.8`
-- Cobra / Viper
+- `flag` / 環境変数
+- Viper（YAML 設定読み込み）
 - GORM / GORM Gen
 - Google Wire
 - `log/slog`
@@ -20,8 +21,10 @@ Go `1.25.8`、DDD、クリーンアーキテクチャ、Cobra、GORM、Google Wi
 - 既定の実行環境は `prd`
 - `dev` は `prd` に対する上書き
 - `local` は `prd` に対する上書き後に `.env` を読み込み、さらに OS 環境変数で上書き
+- `--env` 未指定時は `ENV`、次に `.env`、最後に `prd` の順で実行環境を決定
 - OS 環境変数は全環境で有効なので、ECS タスク定義の環境変数でも `dev` / `prd` を上書き可能
-- Secret Manager は主に `dev` / `prd`、`.env` は `local` 用
+- secrets の解決方式は `SECRETS_PROVIDER=env|aws` で切り替え
+- `env` は `.env` または OS 環境変数の直接値を使い、`aws` は設定上の secret ID から AWS Secrets Manager を使う
 
 例:
 
@@ -34,6 +37,9 @@ DATABASE_DSN='file:override.db?cache=shared' ./bin/go-cli-ddd --env prd account
 `.env` の例:
 
 ```dotenv
+ENV=local
+SECRETS_PROVIDER=env
+AWS_REGION=ap-northeast-1
 APP_DEBUG=true
 DATABASE_DSN=file:go-cli-ddd.db?cache=shared
 EXTERNAL_API1_TOKEN=local-token
@@ -58,7 +64,7 @@ internal/
     persistence/
     secrets/
     wire/
-  interfaces/   Cobra ベースの CLI 境界
+  interfaces/   `flag` ベースの CLI 境界
 ```
 
 ## 開発コマンド
@@ -68,11 +74,13 @@ make install-tools
 make wire
 make build
 make lint
+make watch-go
 make test
 make ci
 ```
 
 - `make lint` は厳しめの共通 lint 設定を実行します。
+- `make watch-go` は `*.go` の変更を監視して `gofmt`、`goimports`、`golangci-lint` を再実行します。
 - `make wire` はコンストラクタ変更後に DI コードを再生成します。
 - `make ci` はローカルでの主要確認手順です。
 
@@ -81,6 +89,6 @@ make ci
 CLI 層は [`internal/interfaces/cli`](./internal/interfaces/cli) で、コマンド定義、request DTO、handler に分離しています。新しいコマンドは次の方針で追加します。
 
 1. request DTO と handler interface を定義する
-2. Cobra の flag 解釈は command file に閉じ込める
+2. `flag.FlagSet` の解釈は command file に閉じ込める
 3. 分岐や orchestration は handler / usecase 側に寄せる
 4. Wire 側の CLI module 登録に追加する

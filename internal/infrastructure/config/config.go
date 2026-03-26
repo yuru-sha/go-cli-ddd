@@ -95,9 +95,9 @@ type AWSConfig struct {
 	Secrets SecretsConfig `mapstructure:"secrets"`
 }
 
-// SecretsConfig は Secret Manager の有効化設定です。
+// SecretsConfig は secrets の解決方式です。
 type SecretsConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	Provider string `mapstructure:"provider"`
 }
 
 // ExternalAPI1Config は外部 API 1 の設定です。
@@ -132,6 +132,11 @@ func NewConfigOptions(configPath, env string) *Options {
 // LoadConfig は設定ファイルから設定を読み込みます。
 // prd を基底値にし、local では .env を最終上書きとして扱います。
 func LoadConfig(opts *Options) (*Config, error) {
+	bootstrapEnv, err := readDotEnvFile(".env")
+	if err != nil {
+		return nil, err
+	}
+
 	v := viper.New()
 	v.SetConfigFile(opts.ConfigPath)
 	v.SetConfigType("yaml")
@@ -141,6 +146,12 @@ func LoadConfig(opts *Options) (*Config, error) {
 	}
 
 	env := strings.ToLower(strings.TrimSpace(opts.Env))
+	if env == "" {
+		env = strings.ToLower(strings.TrimSpace(os.Getenv("ENV")))
+	}
+	if env == "" {
+		env = strings.ToLower(strings.TrimSpace(bootstrapEnv["ENV"]))
+	}
 	if env == "" {
 		env = "prd"
 	}
@@ -164,13 +175,19 @@ func LoadConfig(opts *Options) (*Config, error) {
 	}
 
 	if env == "local" {
-		if err := loadDotEnv(); err != nil {
+		if err := loadDotEnvMap(bootstrapEnv); err != nil {
 			return nil, err
 		}
 	}
 	applyEnvOverrides(&baseConfig)
+	baseConfig.normalizeSecretsProvider()
 
 	return &baseConfig, nil
+}
+
+// UseAWSSecretsManager reports whether secrets should be resolved from AWS Secrets Manager.
+func (cfg *Config) UseAWSSecretsManager() bool {
+	return cfg.AWS.Secrets.Provider == "aws"
 }
 
 func mergeMaps(base, override map[string]any) map[string]any {
@@ -221,16 +238,16 @@ func normalizeMap(data map[string]any) (map[string]any, error) {
 	return normalized, nil
 }
 
-func loadDotEnv() error {
-	const dotEnvPath = ".env"
-	data, err := os.ReadFile(dotEnvPath) //nolint:gosec // Local development intentionally reads the fixed .env file.
+func readDotEnvFile(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path) //nolint:gosec // Local development intentionally reads the fixed .env file.
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return map[string]string{}, nil
 		}
-		return fmt.Errorf(".env の読み込みに失敗しました: %w", err)
+		return nil, fmt.Errorf(".env の読み込みに失敗しました: %w", err)
 	}
 
+	values := make(map[string]string)
 	for line := range strings.SplitSeq(string(data), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
@@ -248,10 +265,19 @@ func loadDotEnv() error {
 			continue
 		}
 
-		if _, exists := os.LookupEnv(key); !exists {
-			if err := os.Setenv(key, value); err != nil {
-				return fmt.Errorf(".env の環境変数設定に失敗しました: %w", err)
-			}
+		values[key] = value
+	}
+
+	return values, nil
+}
+
+func loadDotEnvMap(values map[string]string) error {
+	for key, value := range values {
+		if _, exists := os.LookupEnv(key); exists {
+			continue
+		}
+		if err := os.Setenv(key, value); err != nil {
+			return fmt.Errorf(".env の環境変数設定に失敗しました: %w", err)
 		}
 	}
 
@@ -279,7 +305,7 @@ func applyEnvOverrides(cfg *Config) {
 	overrideInt("HTTP_RATE_LIMIT_BURST", &cfg.HTTP.RateLimit.Burst)
 
 	overrideString("AWS_REGION", &cfg.AWS.Region)
-	overrideBool("AWS_SECRETS_ENABLED", &cfg.AWS.Secrets.Enabled)
+	overrideStringAlias([]string{"SECRETS_PROVIDER", "SECRET_PROVIDER"}, &cfg.AWS.Secrets.Provider)
 
 	overrideString("EXTERNAL_API1_BASE_URL", &cfg.ExternalAPI1.BaseURL)
 	overrideString("EXTERNAL_API1_TOKEN", &cfg.ExternalAPI1.Token)
@@ -301,11 +327,30 @@ func applyEnvOverrides(cfg *Config) {
 	overrideString("SLACK_ICON_EMOJI", &cfg.Notification.Slack.IconEmoji)
 	overrideString("SLACK_SUCCESS_EMOJI", &cfg.Notification.Slack.SuccessEmoji)
 	overrideString("SLACK_FAILURE_EMOJI", &cfg.Notification.Slack.FailureEmoji)
+
+	if value, ok := os.LookupEnv("AWS_SECRETS_ENABLED"); ok && value != "" {
+		if parsed, err := strconv.ParseBool(value); err == nil {
+			if parsed {
+				cfg.AWS.Secrets.Provider = "aws"
+			} else {
+				cfg.AWS.Secrets.Provider = "env"
+			}
+		}
+	}
 }
 
 func overrideString(key string, dest *string) {
 	if value, ok := os.LookupEnv(key); ok && value != "" {
 		*dest = value
+	}
+}
+
+func overrideStringAlias(keys []string, dest *string) {
+	for _, key := range keys {
+		if value, ok := os.LookupEnv(key); ok && value != "" {
+			*dest = value
+			return
+		}
 	}
 }
 
@@ -330,5 +375,17 @@ func overrideFloat(key string, dest *float64) {
 		if parsed, err := strconv.ParseFloat(value, 64); err == nil {
 			*dest = parsed
 		}
+	}
+}
+
+func (cfg *Config) normalizeSecretsProvider() {
+	provider := strings.ToLower(strings.TrimSpace(cfg.AWS.Secrets.Provider))
+	switch provider {
+	case "", "env":
+		cfg.AWS.Secrets.Provider = "env"
+	case "aws", "secretmanager", "secretsmanager":
+		cfg.AWS.Secrets.Provider = "aws"
+	default:
+		cfg.AWS.Secrets.Provider = "env"
 	}
 }

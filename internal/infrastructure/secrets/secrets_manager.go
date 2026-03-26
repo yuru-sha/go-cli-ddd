@@ -18,6 +18,9 @@ type Manager interface {
 	GetSecret(ctx context.Context, secretID string) (string, error)
 }
 
+// EnvManager is a no-op secrets implementation for env-backed development.
+type EnvManager struct{}
+
 // DatabaseSecret stores database credentials loaded from Secret Manager.
 type DatabaseSecret struct {
 	Username string `json:"username"`
@@ -56,10 +59,24 @@ func NewAWSSecretsManager(cfg *config.Config) (*AWSSecretsManager, error) {
 	}, nil
 }
 
+// NewManager creates the secrets manager configured for the current environment.
+func NewManager(cfg *config.Config) (Manager, error) {
+	if !cfg.UseAWSSecretsManager() {
+		return EnvManager{}, nil
+	}
+
+	return NewAWSSecretsManager(cfg)
+}
+
+// GetSecret reports that env-backed mode does not resolve arbitrary secret IDs.
+func (EnvManager) GetSecret(_ context.Context, secretID string) (string, error) {
+	return "", fmt.Errorf("env providerではsecret idを解決できません: %s", secretID)
+}
+
 // GetSecret fetches one raw secret string by ID.
 func (sm *AWSSecretsManager) GetSecret(ctx context.Context, secretID string) (string, error) {
-	if !sm.config.AWS.Secrets.Enabled {
-		return "", fmt.Errorf("secret managerは無効に設定されています")
+	if !sm.config.UseAWSSecretsManager() {
+		return "", fmt.Errorf("aws secrets managerは無効に設定されています")
 	}
 
 	input := &secretsmanager.GetSecretValueInput{

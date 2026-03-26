@@ -1,4 +1,4 @@
-// Package cli provides the Cobra-based command boundary for the application.
+// Package cli provides the flag-based command boundary for the application.
 package cli
 
 import (

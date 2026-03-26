@@ -1,12 +1,13 @@
 # Go CLI DDD
 ![Go CI](https://github.com/yuru-sha/go-cli-ddd/workflows/Go%20CI/badge.svg)
 
-A sample CLI application built with Go `1.25.8`, DDD, Clean Architecture, Cobra, GORM, and Google Wire.
+A sample CLI application built with Go `1.25.8`, DDD, Clean Architecture, `flag`, GORM, and Google Wire.
 
 ## Technology Stack
 
 - Go `1.25.8`
-- Cobra and Viper for CLI and configuration
+- `flag` and environment variables for CLI/config entrypoints
+- Viper for YAML config loading
 - GORM and GORM Gen for persistence
 - Google Wire for dependency injection
 - `log/slog` for structured logging
@@ -20,8 +21,10 @@ Runtime config is defined in [`configs/config.yaml`](./configs/config.yaml).
 - `prd` is the base configuration and default runtime environment.
 - `dev` overlays `prd`.
 - `local` overlays `prd`, then loads `.env`, then applies OS environment variables.
+- If `--env` is omitted, runtime environment is resolved from `ENV`, then `.env`, then defaults to `prd`.
 - OS environment variables override YAML for all environments, so ECS task definition variables are effective in `dev` and `prd`.
-- Secret Manager is intended for `dev` and `prd`; `.env` is intended for `local`.
+- Secrets resolution is switched by `SECRETS_PROVIDER=env|aws`.
+- `env` reads direct values from `.env` or OS environment variables; `aws` reads secret IDs from config and resolves them via AWS Secrets Manager.
 
 Common examples:
 
@@ -35,6 +38,9 @@ DATABASE_DSN='file:override.db?cache=shared' ./bin/go-cli-ddd --env prd account
 Example local overrides:
 
 ```dotenv
+ENV=local
+SECRETS_PROVIDER=env
+AWS_REGION=ap-northeast-1
 APP_DEBUG=true
 DATABASE_DSN=file:go-cli-ddd.db?cache=shared
 EXTERNAL_API1_TOKEN=local-token
@@ -59,7 +65,7 @@ internal/
     persistence/
     secrets/
     wire/
-  interfaces/   Cobra command boundary
+  interfaces/   flag-based command boundary
 ```
 
 ## Development
@@ -69,11 +75,13 @@ make install-tools
 make wire
 make build
 make lint
+make watch-go
 make test
 make ci
 ```
 
 - `make lint` runs the stricter repo-wide lint profile.
+- `make watch-go` watches `*.go` changes and reruns `gofmt`, `goimports`, and `golangci-lint`.
 - `make wire` regenerates dependency injection glue after constructor changes.
 - `make ci` mirrors the main local verification path.
 
@@ -82,6 +90,6 @@ make ci
 The CLI layer is split into command definitions, request DTOs, and handlers under [`internal/interfaces/cli`](./internal/interfaces/cli). New commands should follow the same pattern:
 
 1. Define request DTOs and handler interfaces.
-2. Keep Cobra flag parsing in the command file.
+2. Keep `flag.FlagSet` parsing in the command file.
 3. Keep branching and orchestration in the handler/usecase boundary.
 4. Register the command through the CLI module set in Wire.

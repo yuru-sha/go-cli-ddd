@@ -12,13 +12,13 @@ internal/
   domain/       エンティティとリポジトリ契約
   infrastructure/
     api/        外部 API アダプタ
-    config/     `prd` 基底 + `.env` / 環境変数上書き
-    http/       HTTP クライアントとレスポンス close 共通化
+    config/     `prd` 基底 + `.env` / 環境変数上書き + provider 切替
+    http/       HTTP クライアント
     logger/     `log/slog` 初期化
     notification/
     persistence/
     secrets/
     wire/       DI 構成
   interfaces/
-    cli/        Cobra command, request DTO, handler
+    cli/        flag command, request DTO, handler
 ```

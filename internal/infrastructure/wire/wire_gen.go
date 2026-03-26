@@ -7,7 +7,6 @@
 package wire
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/yuru-sha/go-cli-ddd/internal/application/usecase"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/api/externalapi1"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
@@ -20,7 +19,7 @@ import (
 )
 
 // InitializeApp はアプリケーションを初期化します。
-func InitializeApp(params AppParams) (*cobra.Command, error) {
+func InitializeApp(params AppParams) (*cli.RootCommand, error) {
 	rootCommand := cli.NewRootCommand()
 	options := ProvideConfigOptions(params)
 	configConfig, err := config.LoadConfig(options)
@@ -35,11 +34,10 @@ func InitializeApp(params AppParams) (*cobra.Command, error) {
 	mySQLAccountRepository := mysql.NewAccountRepository(db)
 	httpConfig := ProvideHTTPConfig(configConfig)
 	client := http.NewHTTPClient(httpConfig)
-	awsSecretsManager, err := secrets.NewAWSSecretsManager(configConfig)
+	manager, err := secrets.NewManager(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	manager := ProvideSecretsManager(awsSecretsManager)
 	externalAPI1AccountRepository := externalapi1.NewAccountRepository(configConfig, client, manager)
 	notificationRepository := notification.NewRepository(configConfig)
 	accountUseCase := usecase.NewAccountUseCase(mySQLAccountRepository, externalAPI1AccountRepository, notificationRepository)
@@ -82,10 +80,6 @@ func ProvideAWSConfig(cfg *config.Config) *config.AWSConfig {
 	return &cfg.AWS
 }
 
-func ProvideSecretsManager(sm *secrets.AWSSecretsManager) secrets.Manager {
-	return sm
-}
-
 func ProvideDatabaseConnection(db *mysql.Database) *gorm.DB {
 	return db.DB
 }
@@ -98,9 +92,9 @@ func ProvideCommandModules(
 	return []cli.CommandModule{accountCmd, campaignCmd, masterCmd}
 }
 
-func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cobra.Command, error) {
+func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cli.RootCommand, error) {
 	for _, module := range modules {
-		module.Register(rootCmd.Cmd)
+		rootCmd.Register(module)
 	}
-	return rootCmd.Cmd, nil
+	return rootCmd, nil
 }

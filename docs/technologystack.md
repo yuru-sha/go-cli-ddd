@@ -5,9 +5,10 @@
 - DDD（ドメイン駆動設計）
 - クリーンアーキテクチャ
 
-## CLIフレームワーク
-- Cobra: ^1.9.1
-- Viper: ^1.19.0（設定管理）
+## CLI / 設定
+- flag（標準ライブラリ）
+- os.Getenv（環境変数）
+- Viper: ^1.19.0（YAML 設定読み込み）
 
 ## データベース
 - SQLite: ^1.5.7（GORM SQLiteドライバー）
@@ -36,5 +37,6 @@
 - `prd` を基底設定として使用
 - `dev` は `prd` の上書き
 - `local` は `prd` の上書き後に `.env` を読み込む
+- `--env` 未指定時は `ENV`、次に `.env`、最後に `prd` で決定
 - OS 環境変数は全環境で YAML を上書き可能
-- `dev` / `prd` は Secret Manager 利用を前提
+- `SECRETS_PROVIDER=env|aws` で secrets の取得元を切り替える

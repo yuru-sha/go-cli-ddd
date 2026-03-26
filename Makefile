@@ -1,4 +1,4 @@
-.PHONY: build clean run wire test lint gen-model init-db install-tools test-coverage test-race test-integration ci
+.PHONY: build clean run wire test lint gen-model init-db install-tools test-coverage test-race test-integration ci watch-go
 
 GO_BIN := $(or $(shell go env GOBIN 2>/dev/null),$(shell go env GOPATH 2>/dev/null)/bin,$(HOME)/go/bin)
 
@@ -54,6 +54,10 @@ test-integration:
 # リント
 lint:
 	golangci-lint run
+
+# Goファイルの変更監視
+watch-go:
+	bash scripts/watch-go.sh
 
 # ツールのインストール
 install-tools:

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/spf13/cobra"
 )
 
 type stubCampaignHandler struct {
@@ -21,10 +20,9 @@ func (h *stubCampaignHandler) Run(_ context.Context, req CampaignRequest) error 
 
 func TestCampaignCommandParsesAccountIDs(t *testing.T) {
 	handler := &stubCampaignHandler{}
-	cmd := NewCampaignCommand(handler).Cmd
-	cmd.SetArgs([]string{"--account-ids", "1, 2,3", "--status", "active", "--parallel", "3", "--force"})
+	cmd := NewCampaignCommand(handler)
 
-	err := cmd.Execute()
+	err := cmd.Execute(context.Background(), []string{"--account-ids", "1, 2,3", "--status", "active", "--parallel", "3", "--force"})
 
 	require.NoError(t, err)
 	require.True(t, handler.called)
@@ -35,18 +33,18 @@ func TestCampaignCommandParsesAccountIDs(t *testing.T) {
 }
 
 func TestCommandModulesRegisterToRoot(t *testing.T) {
-	root := &cobra.Command{Use: "root"}
+	root := NewRootCommand()
 
-	accountCmd := &AccountCommand{Cmd: &cobra.Command{Use: "account"}}
-	campaignCmd := &CampaignCommand{Cmd: &cobra.Command{Use: "campaign"}}
-	masterCmd := &MasterCommand{Cmd: &cobra.Command{Use: "master"}}
+	accountCmd := &AccountCommand{}
+	campaignCmd := &CampaignCommand{}
+	masterCmd := &MasterCommand{}
 
 	for _, module := range []CommandModule{accountCmd, campaignCmd, masterCmd} {
-		module.Register(root)
+		root.Register(module)
 	}
 
-	require.Len(t, root.Commands(), 3)
-	require.Equal(t, "account", root.Commands()[0].Use)
-	require.Equal(t, "campaign", root.Commands()[1].Use)
-	require.Equal(t, "master", root.Commands()[2].Use)
+	require.Len(t, root.modules, 3)
+	require.Contains(t, root.modules, "account")
+	require.Contains(t, root.modules, "campaign")
+	require.Contains(t, root.modules, "master")
 }

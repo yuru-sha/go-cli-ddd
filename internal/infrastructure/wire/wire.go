@@ -5,7 +5,6 @@ package wire
 
 import (
 	"github.com/google/wire"
-	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/application/usecase"
@@ -23,13 +22,12 @@ type AppParams struct {
 	Env        string
 }
 
-func InitializeApp(params AppParams) (*cobra.Command, error) {
+func InitializeApp(params AppParams) (*cli.RootCommand, error) {
 	wire.Build(
 		ProvideConfigOptions,
 		config.LoadConfig,
 		ProvideHTTPConfig,
-		secrets.NewAWSSecretsManager,
-		ProvideSecretsManager,
+		secrets.NewManager,
 		mysql.NewDatabase,
 		ProvideDatabaseConnection,
 		mysql.NewAccountRepository,
@@ -70,10 +68,6 @@ func ProvideAWSConfig(cfg *config.Config) *config.AWSConfig {
 	return &cfg.AWS
 }
 
-func ProvideSecretsManager(sm *secrets.AWSSecretsManager) secrets.Manager {
-	return sm
-}
-
 func ProvideDatabaseConnection(db *mysql.Database) *gorm.DB {
 	return db.DB
 }
@@ -86,9 +80,9 @@ func ProvideCommandModules(
 	return []cli.CommandModule{accountCmd, campaignCmd, masterCmd}
 }
 
-func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cobra.Command, error) {
+func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cli.RootCommand, error) {
 	for _, module := range modules {
-		module.Register(rootCmd.Cmd)
+		rootCmd.Register(module)
 	}
-	return rootCmd.Cmd, nil
+	return rootCmd, nil
 }

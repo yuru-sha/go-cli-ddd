@@ -7,21 +7,19 @@ import (
 	"os"
 
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/wire"
+	"github.com/yuru-sha/go-cli-ddd/internal/interfaces/cli"
 )
 
 func main() {
-	configPath := "configs/config.yaml"
-	env := "prd"
-
-	for i, arg := range os.Args {
-		if arg == "--env" && i+1 < len(os.Args) {
-			env = os.Args[i+1]
-		}
+	opts, _, _, err := cli.ParseRootArgs(os.Args[1:], "configs/config.yaml")
+	if err != nil {
+		fmt.Printf("起動引数の解析に失敗しました: %v\n", err)
+		os.Exit(1)
 	}
 
 	params := wire.AppParams{
-		ConfigPath: configPath,
-		Env:        env,
+		ConfigPath: opts.ConfigPath,
+		Env:        opts.Env,
 	}
 
 	rootCmd, err := wire.InitializeApp(params)
@@ -30,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCmd.Execute(os.Args[1:]); err != nil {
 		slog.Error("コマンドの実行に失敗しました", "err", err)
 		os.Exit(1)
 	}

@@ -52,7 +52,7 @@ local:
   aws:
     region: "ap-northeast-1"
     secrets:
-      enabled: false
+      provider: "env"
 
 dev:
   app:
@@ -94,7 +94,7 @@ dev:
   aws:
     region: "ap-northeast-1"
     secrets:
-      enabled: true
+      provider: "aws"
 
 prd:
   app:
@@ -137,4 +137,4 @@ prd:
   aws:
     region: "ap-northeast-1"
     secrets:
-      enabled: true
+      provider: "aws"

@@ -20,10 +20,9 @@ func (h *stubAccountHandler) Run(_ context.Context, req AccountRequest) error {
 
 func TestAccountCommandMapsFlagsToRequest(t *testing.T) {
 	handler := &stubAccountHandler{}
-	cmd := NewAccountCommand(handler).Cmd
-	cmd.SetArgs([]string{"--id", "1,2", "--mode", "diff", "--force"})
+	cmd := NewAccountCommand(handler)
 
-	err := cmd.Execute()
+	err := cmd.Execute(context.Background(), []string{"--id", "1,2", "--mode", "diff", "--force"})
 
 	require.NoError(t, err)
 	require.True(t, handler.called)

@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/oauth2"
+
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/config"
 	"github.com/yuru-sha/go-cli-ddd/internal/infrastructure/secrets"
-	"golang.org/x/oauth2"
 )
 
 // Client は外部API2（例：Google Ads API）のクライアントです。
@@ -62,7 +63,7 @@ func (c *Client) GetTokenSource(ctx context.Context) (oauth2.TokenSource, error)
 	}
 
 	var refreshToken string
-	if c.config.AWS.Secrets.Enabled && c.config.ExternalAPI2.OAuth2SecretID != "" {
+	if c.config.UseAWSSecretsManager() && c.config.ExternalAPI2.OAuth2SecretID != "" {
 		slog.Info("Secret ManagerからOAuth2認証情報を取得します")
 
 		secretValue, err := c.secretsManager.GetSecret(ctx, c.config.ExternalAPI2.OAuth2SecretID)

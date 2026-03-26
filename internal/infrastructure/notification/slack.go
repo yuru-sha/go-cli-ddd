@@ -32,7 +32,7 @@ type SlackAttachment struct {
 	Color  string `json:"color"`
 	Text   string `json:"text"`
 	Footer string `json:"footer,omitempty"`
-	Ts     int64  `json:"ts,omitempty"`
+	TS     int64  `json:"ts,omitempty"`
 }
 
 // NewSlackNotifier creates a Slack notifier.

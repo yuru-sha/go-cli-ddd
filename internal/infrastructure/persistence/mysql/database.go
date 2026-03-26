@@ -119,6 +119,10 @@ func NewDatabase(cfg *config.Config) (*Database, error) {
 func (db *Database) setupAuroraConnection(ctx context.Context, gormConfig *gorm.Config) (*gorm.DB, error) {
 	cfg := db.Config
 
+	if !cfg.UseAWSSecretsManager() {
+		return nil, fmt.Errorf("aurora接続は secrets provider=aws のときだけ利用できます")
+	}
+
 	secretsManager, err := secrets.NewAWSSecretsManager(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("secret managerの初期化に失敗しました: %w", err)
@@ -200,7 +204,7 @@ func (db *Database) getLoadBalancingPolicy() dbresolver.Policy {
 }
 
 func getDSN(ctx context.Context, cfg *config.Config) (string, error) {
-	if cfg.AWS.Secrets.Enabled && cfg.Database.SecretID != "" {
+	if cfg.UseAWSSecretsManager() && cfg.Database.SecretID != "" {
 		slog.Info("Secret Managerからデータベース接続情報を取得します")
 
 		secretsManager, err := secrets.NewAWSSecretsManager(cfg)

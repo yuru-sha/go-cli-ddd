@@ -42,7 +42,7 @@ func NewAPIClient(cfg *config.Config, httpClient *http.Client, secretsManager se
 
 // GetAuthorizationHeader resolves the authorization header for External API 1.
 func (c *APIClient) GetAuthorizationHeader(ctx context.Context) (string, string, error) {
-	if c.config.AWS.Secrets.Enabled && c.config.ExternalAPI1.TokenSecretID != "" {
+	if c.config.UseAWSSecretsManager() && c.config.ExternalAPI1.TokenSecretID != "" {
 		slog.Info("Secret ManagerからAPIトークンを取得します")
 
 		tokenStr, err := c.secretsManager.GetSecret(ctx, c.config.ExternalAPI1.TokenSecretID)

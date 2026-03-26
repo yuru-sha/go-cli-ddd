@@ -12,7 +12,7 @@ import (
 
 func main() {
 	configPath := flag.String("config", "configs/config.yaml", "設定ファイルのパス")
-	env := flag.String("env", "prd", "環境（local, dev, prd）")
+	env := flag.String("env", "", "環境（local, dev, prd）。未指定時は ENV または .env を参照")
 	flag.Parse()
 
 	opts := config.NewConfigOptions(*configPath, *env)
@@ -29,6 +29,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("環境: %s (ベース: prd)\n", *env)
+	resolvedEnv := *env
+	if resolvedEnv == "" {
+		resolvedEnv = os.Getenv("ENV")
+		if resolvedEnv == "" {
+			resolvedEnv = "prd"
+		}
+	}
+
+	fmt.Printf("環境: %s (ベース: prd)\n", resolvedEnv)
 	fmt.Println(string(jsonBytes))
 }

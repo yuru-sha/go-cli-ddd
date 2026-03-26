@@ -1,39 +1,54 @@
-// Package cli provides the Cobra-based command boundary for the application.
 package cli
 
 import (
 	"context"
-
-	"github.com/spf13/cobra"
+	"flag"
 )
 
 // NewAccountCommand はアカウントコマンドを作成します。
 func NewAccountCommand(handler AccountHandler) *AccountCommand {
-	flags := &AccountRequest{}
+	return &AccountCommand{handler: handler}
+}
 
-	cmd := &cobra.Command{
-		Use:   "account",
-		Short: "アカウント情報を同期します",
-		Long:  `外部APIからアカウント情報を取得し、データベースに保存します。`,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runCommand(
-				context.Background(),
-				"アカウント同期コマンドを実行します",
-				[]any{
-					"account_ids", flags.AccountIDs,
-					"sync_mode", flags.SyncMode,
-					"force", flags.Force,
-				},
-				func(ctx context.Context) error {
-					return handler.Run(ctx, *flags)
-				},
-			)
-		},
+// Execute parses flags and runs the account command.
+func (c *AccountCommand) Execute(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet(c.Name(), flag.ContinueOnError)
+
+	var (
+		accountIDs string
+		syncMode   string
+		force      bool
+	)
+
+	fs.StringVar(&accountIDs, "id", "", "同期するアカウントID（カンマ区切り、未指定なら全件）")
+	fs.StringVar(&syncMode, "mode", "full", "同期モード（full, diff）")
+	fs.BoolVar(&force, "force", false, "強制同期フラグ")
+
+	if err := parseCommandFlags(fs, args, c.Name()); err != nil {
+		return err
 	}
 
-	cmd.Flags().IntSliceVar(&flags.AccountIDs, "id", []int{}, "同期するアカウントID（指定しない場合は全アカウント）")
-	cmd.Flags().StringVar(&flags.SyncMode, "mode", "full", "同期モード（full: 全同期, diff: 差分同期）")
-	cmd.Flags().BoolVar(&flags.Force, "force", false, "強制同期フラグ（既存データを上書き）")
+	parsedIDs, err := parseCSVIntIDs(accountIDs)
+	if err != nil {
+		return err
+	}
 
-	return &AccountCommand{Cmd: cmd}
+	request := AccountRequest{
+		AccountIDs: parsedIDs,
+		SyncMode:   syncMode,
+		Force:      force,
+	}
+
+	return runCommand(
+		ctx,
+		"アカウント同期コマンドを実行します",
+		[]any{
+			"account_ids", request.AccountIDs,
+			"sync_mode", request.SyncMode,
+			"force", request.Force,
+		},
+		func(runCtx context.Context) error {
+			return c.handler.Run(runCtx, request)
+		},
+	)
 }

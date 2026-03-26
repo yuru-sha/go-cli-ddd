@@ -1,54 +1,56 @@
-// Package cli provides the Cobra-based command boundary for the application.
+// Package cli provides the flag-based command boundary for the application.
 package cli
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/spf13/cobra"
 )
 
-// CommandModule represents a CLI module that can register itself on the root command.
+// CommandModule represents one executable CLI command.
 type CommandModule interface {
-	Register(root *cobra.Command)
+	Name() string
+	Execute(ctx context.Context, args []string) error
 }
 
-// RootCommand wraps the Cobra root command.
+// RootCommand executes the top-level CLI and dispatches subcommands.
 type RootCommand struct {
-	Cmd *cobra.Command
+	configPath string
+	env        string
+	modules    map[string]CommandModule
 }
 
 // AccountCommand wraps the account subcommand.
 type AccountCommand struct {
-	Cmd *cobra.Command
+	handler AccountHandler
 }
 
-// Register attaches the account command to the root command.
-func (c *AccountCommand) Register(root *cobra.Command) {
-	root.AddCommand(c.Cmd)
+// Name returns the subcommand name.
+func (c *AccountCommand) Name() string {
+	return "account"
 }
 
 // CampaignCommand wraps the campaign subcommand.
 type CampaignCommand struct {
-	Cmd *cobra.Command
+	handler CampaignHandler
 }
 
-// Register attaches the campaign command to the root command.
-func (c *CampaignCommand) Register(root *cobra.Command) {
-	root.AddCommand(c.Cmd)
+// Name returns the subcommand name.
+func (c *CampaignCommand) Name() string {
+	return "campaign"
 }
 
 // MasterCommand wraps the master subcommand.
 type MasterCommand struct {
-	Cmd *cobra.Command
+	handler MasterHandler
 }
 
-// Register attaches the master command to the root command.
-func (c *MasterCommand) Register(root *cobra.Command) {
-	root.AddCommand(c.Cmd)
+// Name returns the subcommand name.
+func (c *MasterCommand) Name() string {
+	return "master"
 }
 
 // AccountRequest is the CLI input for the account command.
@@ -110,4 +112,23 @@ func parseCSVIntIDs(value string) ([]int, error) {
 	}
 
 	return ids, nil
+}
+
+func parseCommandFlags(fs *flag.FlagSet, args []string, commandName string) error {
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("%s コマンドに未対応の引数があります: %v", commandName, fs.Args())
+	}
+
+	return nil
+}
+
+func validateParallel(parallel int) error {
+	if parallel < 1 || parallel > 10 {
+		return fmt.Errorf("parallel は 1 から 10 の範囲で指定してください")
+	}
+
+	return nil
 }

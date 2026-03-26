@@ -20,7 +20,6 @@ import (
 
 // InitializeApp はアプリケーションを初期化します。
 func InitializeApp(params AppParams) (*cli.RootCommand, error) {
-	rootCommand := cli.NewRootCommand()
 	options := ProvideConfigOptions(params)
 	configConfig, err := config.LoadConfig(options)
 	if err != nil {
@@ -52,7 +51,7 @@ func InitializeApp(params AppParams) (*cli.RootCommand, error) {
 	masterHandler := cli.NewMasterHandler(masterUseCase)
 	masterCommand := cli.NewMasterCommand(masterHandler)
 	commandModules := ProvideCommandModules(accountCommand, campaignCommand, masterCommand)
-	command, err := ProvideRootCommand(rootCommand, commandModules)
+	command, err := ProvideRootCommand(commandModules)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,8 @@ func ProvideCommandModules(
 	return []cli.CommandModule{accountCmd, campaignCmd, masterCmd}
 }
 
-func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cli.RootCommand, error) {
+func ProvideRootCommand(modules []cli.CommandModule) (*cli.RootCommand, error) {
+	rootCmd := cli.NewRootCommand()
 	for _, module := range modules {
 		rootCmd.Register(module)
 	}

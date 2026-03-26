@@ -42,7 +42,6 @@ func InitializeApp(params AppParams) (*cli.RootCommand, error) {
 		cli.NewAccountHandler,
 		cli.NewCampaignHandler,
 		cli.NewMasterHandler,
-		cli.NewRootCommand,
 		cli.NewAccountCommand,
 		cli.NewCampaignCommand,
 		cli.NewMasterCommand,
@@ -80,7 +79,8 @@ func ProvideCommandModules(
 	return []cli.CommandModule{accountCmd, campaignCmd, masterCmd}
 }
 
-func ProvideRootCommand(rootCmd *cli.RootCommand, modules []cli.CommandModule) (*cli.RootCommand, error) {
+func ProvideRootCommand(modules []cli.CommandModule) (*cli.RootCommand, error) {
+	rootCmd := cli.NewRootCommand()
 	for _, module := range modules {
 		rootCmd.Register(module)
 	}
